@@ -1,0 +1,8 @@
+{
+  "name": "SHREDLOG PRO",
+  "short_name": "SHREDLOG",
+  "start_url": "./SHREDLOG.html",
+  "display": "standalone",
+  "background_color": "#070b14",
+  "theme_color": "#0f172a"
+}
