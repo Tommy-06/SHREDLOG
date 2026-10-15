@@ -1,7 +1,7 @@
 {
   "name": "SHREDLOG",
   "short_name": "SHREDLOG",
-  "start_url": "./SHREDLOG.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#070b14",
   "theme_color": "#0f172a",
@@ -10,6 +10,7 @@
       "src": "logo.png",
       "sizes": "1024x1024",
       "type": "image/png"
+      "purpose": "any maskable"
     }
   ]
 }
