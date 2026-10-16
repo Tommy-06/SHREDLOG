@@ -43,9 +43,9 @@
         let appState = getDefaultState();
         let showCompletedDeadlinesState = false;
         let currentDetailClientId = null;
-        let isCloudLoaded = false;
+        let isSyncing = false;
 
-        // --- CARICAMENTO E SINCRONIZZAZIONE STABILE FIREBASE ---
+        // --- CARICAMENTO INIZIALE E SYNC STABILE ---
         dbRef.once('value').then((snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -53,11 +53,11 @@
             } else {
                 dbRef.set(appState);
             }
-            isCloudLoaded = true;
             refreshAllViews();
 
-            // Ascolta i cambiamenti in tempo reale dagli altri dispositivi
+            // Ascolta modifiche remote senza interferire con i salvataggi locali
             dbRef.on('value', (snap) => {
+                if (isSyncing) return;
                 const cloudData = snap.val();
                 if (cloudData && JSON.stringify(cloudData) !== JSON.stringify(appState)) {
                     appState = cloudData;
@@ -65,15 +65,18 @@
                 }
             });
         }).catch((err) => {
-            console.error("Errore di connessione Firebase:", err);
-            isCloudLoaded = true;
+            console.error("Errore Firebase:", err);
             refreshAllViews();
         });
 
         function saveState() {
-            if (isCloudLoaded) {
-                dbRef.set(appState).catch((err) => console.error("Errore salvataggio:", err));
-            }
+            isSyncing = true;
+            dbRef.set(appState).then(() => {
+                setTimeout(() => { isSyncing = false; }, 500);
+            }).catch((err) => {
+                isSyncing = false;
+                console.error("Errore salvataggio:", err);
+            });
             refreshAllViews();
         }
 
