@@ -45,8 +45,8 @@
         let currentDetailClientId = null;
         let isCloudLoaded = false;
 
-        // --- COLLEGAMENTO FIREBASE REALTIME DATABASE ---
-        dbRef.on('value', (snapshot) => {
+        // --- CARICAMENTO E SINCRONIZZAZIONE STABILE FIREBASE ---
+        dbRef.once('value').then((snapshot) => {
             const data = snapshot.val();
             if (data) {
                 appState = data;
@@ -55,11 +55,24 @@
             }
             isCloudLoaded = true;
             refreshAllViews();
+
+            // Ascolta i cambiamenti in tempo reale dagli altri dispositivi
+            dbRef.on('value', (snap) => {
+                const cloudData = snap.val();
+                if (cloudData && JSON.stringify(cloudData) !== JSON.stringify(appState)) {
+                    appState = cloudData;
+                    refreshAllViews();
+                }
+            });
+        }).catch((err) => {
+            console.error("Errore di connessione Firebase:", err);
+            isCloudLoaded = true;
+            refreshAllViews();
         });
 
         function saveState() {
             if (isCloudLoaded) {
-                dbRef.set(appState);
+                dbRef.set(appState).catch((err) => console.error("Errore salvataggio:", err));
             }
             refreshAllViews();
         }
