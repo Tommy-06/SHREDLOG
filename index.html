@@ -10,44 +10,51 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     
-    <!-- Firebase SDKs (CDN) -->
+<!-- Firebase SDKs (CDN) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
-  <script>
-let appState = {
-            settings: { rateScuolaInd: 40, rateScuolaCol: 42, rateClubHourly: 35, seasonGoal: 12000, taxReservePct: 15, lastWaxDate: '2026-12-01' },
-            clients: [],
-            lessons: [],
-            deadlines: [
-                { id: 'd1', title: 'Fattura Mensile Scuola', category: 'fiscale', date: '2027-01-31', done: false }
-            ]
+    <script>
+        // Configurazione e connessione a Firebase Cloud
+        const firebaseConfig = {
+            apiKey: "AIzaSyC02BYD_TjOUEa3qDeJlh9c5sPzBhv42Ic",
+            authDomain: "shredlog-sync.firebaseapp.com",
+            databaseURL: "https://shredlog-sync-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "shredlog-sync",
+            storageBucket: "shredlog-sync.firebasestorage.app",
+            messagingSenderId: "68852713386",
+            appId: "1:68852713386:web:f0347df2c5c77702a70dd3",
+            measurementId: "G-2T9S1Y2GCJ"
         };
+        firebase.initializeApp(firebaseConfig);
+        const dbRef = firebase.database().ref('shredlog_data');
+
+        function getDefaultState() {
+            return {
+                settings: { rateScuolaInd: 40, rateScuolaCol: 42, rateClubHourly: 35, seasonGoal: 12000, taxReservePct: 15, lastWaxDate: '2026-12-01' },
+                clients: [], // Lista clienti pulita e vuota senza Lorenzo V.
+                lessons: [],
+                deadlines: [
+                    { id: 'd1', title: 'Fattura Mensile Scuola', category: 'fiscale', date: '2027-01-31', done: false }
+                ]
+            };
+        }
+
+        let appState = getDefaultState();
+        let showCompletedDeadlinesState = false;
+        let currentDetailClientId = null;
         let isCloudLoaded = false;
 
-        // Connessione iniziale e sincronizzazione in tempo reale blindata
-        dbRef.once('value').then((snapshot) => {
+        // --- COLLEGAMENTO FIREBASE REALTIME DATABASE ---
+        dbRef.on('value', (snapshot) => {
             const data = snapshot.val();
-            if (data && data.lessons) {
+            if (data) {
                 appState = data;
             } else {
-                // Se il database è vuoto o non ha lezioni, inizializzalo
                 dbRef.set(appState);
             }
             isCloudLoaded = true;
             refreshAllViews();
-
-            // Ascolta i cambiamenti in tempo reale dagli altri dispositivi
-            dbRef.on('value', (snapshot) => {
-                const cloudData = snapshot.val();
-                if (cloudData && cloudData.lessons) {
-                    // Aggiorna solo se i dati del cloud sono diversi per evitare loop
-                    if (JSON.stringify(cloudData.lessons) !== JSON.stringify(appState.lessons)) {
-                        appState = cloudData;
-                        refreshAllViews();
-                    }
-                }
-            });
         });
 
         function saveState() {
@@ -59,6 +66,7 @@ let appState = {
 
         function showToast(msg) {
             const t = document.getElementById('toast');
+            if(!t) return;
             document.getElementById('toast-msg').textContent = msg;
             t.classList.remove('hidden');
             setTimeout(() => t.classList.add('hidden'), 2000);
