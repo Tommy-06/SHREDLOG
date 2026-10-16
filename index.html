@@ -59,9 +59,14 @@
 
         function saveState() {
             if (isCloudLoaded) {
-                dbRef.set(appState);
+                dbRef.set(appState).then(() => {
+                    refreshAllViews();
+                }).catch((error) => {
+                    console.error("Errore di salvataggio:", error);
+                });
+            } else {
+                refreshAllViews();
             }
-            refreshAllViews();
         }
 
         function showToast(msg) {
@@ -204,6 +209,7 @@
             const id = document.getElementById('lessonId').value;
             const entity = document.getElementById('lessonEntity').value;
             const hoursVal = entity === 'club' ? 3 : (parseFloat(document.getElementById('lessonHours').value) || 2);
+            
             const lesson = {
                 id: id || 'l_' + Date.now(),
                 date: document.getElementById('lessonDate').value,
@@ -215,6 +221,58 @@
                 clientId: entity === 'scuola' ? document.getElementById('lessonClient').value : '',
                 notes: document.getElementById('lessonNotes').value.trim()
             };
+
+            if (id) {
+                const idx = appState.lessons.findIndex(x => x.id === id);
+                if (idx > -1) appState.lessons[idx] = lesson;
+            } else {
+                appState.lessons.unshift(lesson);
+            }
+
+            resetLessonForm();
+            saveState();
+            showToast('Lezione salvata sul Cloud!');
+        }
+
+        function saveClient(e) {
+            e.preventDefault();
+            const id = document.getElementById('clientId').value;
+            const client = {
+                id: id || 'c_' + Date.now(),
+                name: document.getElementById('clientName').value.trim(),
+                stance: document.getElementById('clientStance').value,
+                level: document.getElementById('clientLevel').value,
+                goal: document.getElementById('clientGoal').value.trim(),
+                notes: document.getElementById('clientNotes').value.trim(),
+                skills: {}
+            };
+            const existing = appState.clients.find(x => x.id === client.id);
+            client.skills = (existing && existing.skills) ? existing.skills : { 'Conduzione Base': 0, 'Carving': 0, 'Switch': 0, 'Box/Rail': 0, '180': 0, '360': 0, 'Grab': 0 };
+
+            if (id) {
+                const idx = appState.clients.findIndex(x => x.id === id);
+                if (idx > -1) appState.clients[idx] = client;
+            } else {
+                appState.clients.push(client);
+            }
+            closeClientModal();
+            saveState();
+            showToast('Cliente salvato!');
+        }
+
+        function saveDeadline(e) {
+            e.preventDefault();
+            appState.deadlines.push({
+                id: 'dl_' + Date.now(),
+                title: document.getElementById('dlTitle').value.trim(),
+                date: document.getElementById('dlDate').value,
+                category: document.getElementById('dlCategory').value,
+                done: false
+            });
+            closeDeadlineModal();
+            saveState();
+            showToast('Scadenza salvata!');
+        }
 
             if (id) {
                 const idx = appState.lessons.findIndex(x => x.id === id);
