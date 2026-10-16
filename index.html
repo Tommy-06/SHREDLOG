@@ -15,17 +15,47 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
     <script>
-        // Configurazione Firebase Cloud Sync
-        const firebaseConfig = {
-            apiKey: "AIzaSyC02BYD_TjOUEa3qDeJlh9c5sPzBhv42Ic",
-            authDomain: "shredlog-sync.firebaseapp.com",
-            databaseURL: "https://shredlog-sync-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "shredlog-sync",
-            storageBucket: "shredlog-sync.firebasestorage.app",
-            messagingSenderId: "68852713386",
-            appId: "1:68852713386:web:f0347df2c5c77702a70dd3",
-            measurementId: "G-2T9S1Y2GCJ"
-        };
+// Configurazione Firebase Cloud Sync
+const firebaseConfig = {
+    apiKey: "AIzaSyC02BYD_TjOUEa3qDeJlh9c5sPzBhv42Ic",
+    authDomain: "shredlog-sync.firebaseapp.com",
+    databaseURL: "https://shredlog-sync-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "shredlog-sync",
+    storageBucket: "shredlog-sync.firebasestorage.app",
+    messagingSenderId: "68852713386",
+    appId: "1:68852713386:web:f0347df2c5c77702a70dd3",
+    measurementId: "G-2T9S1Y2GCJ"
+};
+firebase.initializeApp(firebaseConfig);
+const dbRef = firebase.database().ref('shredlog_data');
+
+let appState = {
+    settings: { rateScuolaInd: 40, rateScuolaCol: 42, rateClubHourly: 35, seasonGoal: 12000, taxReservePct: 15, lastWaxDate: '2026-12-01' },
+    clients: [],
+    lessons: [],
+    deadlines: []
+};
+let isCloudLoaded = false;
+
+// Ascolta i dati in tempo reale da Firebase
+dbRef.on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+        appState = data;
+    } else {
+        // Se il database è completamente vuoto, carica i dati di default e salvali sul cloud
+        dbRef.set(appState);
+    }
+    isCloudLoaded = true;
+    refreshAllViews();
+});
+
+function saveState() {
+    if (isCloudLoaded) {
+        dbRef.set(appState);
+    }
+    refreshAllViews();
+}
         firebase.initializeApp(firebaseConfig);
         const dbRef = firebase.database().ref('shredlog_data');
 
