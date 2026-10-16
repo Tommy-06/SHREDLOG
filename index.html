@@ -24,22 +24,9 @@
                         mono: ['JetBrains Mono', 'monospace'],
                     },
                     colors: {
-                        alpine: {
-                            950: '#070b14',
-                            900: '#0f172a',
-                            800: '#1e293b',
-                            700: '#334155',
-                        },
-                        scuola: {
-                            light: '#f87171',
-                            DEFAULT: '#ef4444',
-                            dark: '#dc2626'
-                        },
-                        club: {
-                            light: '#4ade80',
-                            DEFAULT: '#22c55e',
-                            dark: '#16a34a'
-                        }
+                        alpine: { 950: '#070b14', 900: '#0f172a', 800: '#1e293b', 700: '#334155' },
+                        scuola: { light: '#f87171', DEFAULT: '#ef4444', dark: '#dc2626' },
+                        club: { light: '#4ade80', DEFAULT: '#22c55e', dark: '#16a34a' }
                     }
                 }
             }
@@ -55,33 +42,18 @@
             background-attachment: fixed;
             color: #f8fafc;
         }
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f172a;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #475569;
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
         .glass-card {
             background: rgba(30, 41, 59, 0.65);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .skill-badge {
-            transition: all 0.15s ease;
-            user-select: none;
-        }
-        .skill-badge:active {
-            transform: scale(0.95);
-        }
+        .skill-badge { transition: all 0.15s ease; user-select: none; }
+        .skill-badge:active { transform: scale(0.95); }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased selection:bg-blue-500 selection:text-white pb-20 md:pb-8">
@@ -136,21 +108,10 @@
         </div>
 
         <nav class="max-w-7xl mx-auto mt-3 hidden md:flex items-center gap-2 border-t border-slate-800/80 pt-2.5">
-            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">
-                Dashboard & Compensi
-            </button>
-            <button onclick="switchTab('lezioni')" id="nav-lezioni" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">
-                Registro Ore & Lezioni 
-                <span id="badge-lezioni-count" class="ml-1 text-xs font-mono px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded-md">0</span>
-            </button>
-            <button onclick="switchTab('clienti')" id="nav-clienti" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">
-                Clienti & Livello Tecnico 
-                <span id="badge-clienti-count" class="ml-1 text-xs font-mono px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded-md">0</span>
-            </button>
-            <button onclick="switchTab('scadenze')" id="nav-scadenze" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">
-                Scadenze, Fisco & Attrezzatura 
-                <span id="badge-scadenze-alert" class="hidden w-2 h-2 rounded-full bg-blue-500"></span>
-            </button>
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">Dashboard & Compensi</button>
+            <button onclick="switchTab('lezioni')" id="nav-lezioni" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">Registro Ore & Lezioni <span id="badge-lezioni-count" class="ml-1 text-xs font-mono px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded-md">0</span></button>
+            <button onclick="switchTab('clienti')" id="nav-clienti" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">Clienti & Livello Tecnico <span id="badge-clienti-count" class="ml-1 text-xs font-mono px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded-md">0</span></button>
+            <button onclick="switchTab('scadenze')" id="nav-scadenze" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">Scadenze, Fisco & Attrezzatura <span id="badge-scadenze-alert" class="hidden w-2 h-2 rounded-full bg-blue-500"></span></button>
         </nav>
     </header>
 
@@ -182,12 +143,8 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="glass-card rounded-2xl p-5">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Compenso Netto Totale</p>
-                            <h3 class="text-2xl sm:text-3xl font-extrabold font-mono text-white mt-1" id="kpi-total-net">0 €</h3>
-                        </div>
-                    </div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Compenso Netto Totale</p>
+                    <h3 class="text-2xl sm:text-3xl font-extrabold font-mono text-white mt-1" id="kpi-total-net">0 €</h3>
                     <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
                         <span class="text-slate-400">Incassato: <strong class="text-emerald-400 font-mono" id="kpi-paid-net">0 €</strong></span>
                         <span class="text-slate-400">Tasse stimate: <strong class="text-blue-400 font-mono" id="kpi-tax-net">0 €</strong></span>
@@ -195,14 +152,10 @@
                 </div>
 
                 <div class="glass-card rounded-2xl p-5">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Ore Totali Lavorate</p>
-                            <div class="flex items-baseline gap-2 mt-1">
-                                <h3 class="text-2xl sm:text-3xl font-extrabold font-mono text-white" id="kpi-total-hours">0h</h3>
-                                <span class="text-xs text-slate-400" id="kpi-days-count">(0 giornate)</span>
-                            </div>
-                        </div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Ore Totali Lavorate</p>
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <h3 class="text-2xl sm:text-3xl font-extrabold font-mono text-white" id="kpi-total-hours">0h</h3>
+                        <span class="text-xs text-slate-400" id="kpi-days-count">(0 giornate)</span>
                     </div>
                     <div class="mt-4">
                         <div class="flex justify-between text-xs mb-1">
@@ -217,21 +170,17 @@
                 </div>
 
                 <div class="glass-card rounded-2xl p-5">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Scuola vs Club</p>
-                            <div class="mt-1.5 space-y-1">
-                                <div class="flex items-center gap-2 text-sm">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-                                    <span class="text-slate-300 text-xs">Scuola:</span>
-                                    <strong class="font-mono text-white ml-auto" id="kpi-euro-scuola">0 €</strong>
-                                </div>
-                                <div class="flex items-center gap-2 text-sm">
-                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                                    <span class="text-slate-300 text-xs">Club:</span>
-                                    <strong class="font-mono text-white ml-auto" id="kpi-euro-club">0 €</strong>
-                                </div>
-                            </div>
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Scuola vs Club</p>
+                    <div class="mt-1.5 space-y-1">
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                            <span class="text-slate-300 text-xs">Scuola:</span>
+                            <strong class="font-mono text-white ml-auto" id="kpi-euro-scuola">0 €</strong>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            <span class="text-slate-300 text-xs">Club:</span>
+                            <strong class="font-mono text-white ml-auto" id="kpi-euro-club">0 €</strong>
                         </div>
                     </div>
                     <div class="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
@@ -241,19 +190,15 @@
                 </div>
 
                 <div class="glass-card rounded-2xl p-5">
-                    <div class="flex justify-between items-start">
-                        <div class="w-full">
-                            <div class="flex justify-between items-center">
-                                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Target Stagione</p>
-                                <span class="text-xs font-mono text-blue-400 font-bold" id="kpi-goal-pct">0%</span>
-                            </div>
-                            <h3 class="text-lg font-bold text-white mt-1 font-mono">
-                                <span id="kpi-goal-current">0 €</span> <span class="text-xs text-slate-400 font-normal">/ <span id="kpi-goal-target">12.000 €</span></span>
-                            </h3>
-                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden mt-2">
-                                <div id="bar-season-goal" class="bg-gradient-to-r from-blue-500 to-emerald-400 h-full transition-all duration-500" style="width: 0%"></div>
-                            </div>
-                        </div>
+                    <div class="flex justify-between items-center">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Target Stagione</p>
+                        <span class="text-xs font-mono text-blue-400 font-bold" id="kpi-goal-pct">0%</span>
+                    </div>
+                    <h3 class="text-lg font-bold text-white mt-1 font-mono">
+                        <span id="kpi-goal-current">0 €</span> <span class="text-xs text-slate-400 font-normal">/ <span id="kpi-goal-target">12.000 €</span></span>
+                    </h3>
+                    <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden mt-2">
+                        <div id="bar-season-goal" class="bg-gradient-to-r from-blue-500 to-emerald-400 h-full transition-all duration-500" style="width: 0%"></div>
                     </div>
                     <div class="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs">
                         <span class="text-slate-400">🏂 Sciolina/Lamine:</span>
@@ -264,12 +209,8 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-2 glass-card rounded-2xl p-5 flex flex-col justify-between">
-                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
-                        <div>
-                            <h3 class="font-bold text-white text-base">Andamento Stagione Invernale (Dicembre - Aprile)</h3>
-                            <p class="text-xs text-slate-400">Confronto compensi tra Scuola e Club</p>
-                        </div>
-                    </div>
+                    <h3 class="font-bold text-white text-base mb-1">Andamento Stagione Invernale (Dicembre - Aprile)</h3>
+                    <p class="text-xs text-slate-400 mb-6">Confronto compensi tra Scuola e Club</p>
                     <div id="monthly-chart" class="grid grid-cols-5 gap-2 sm:gap-4 items-end h-52 pt-6 px-2 border-b border-slate-800"></div>
                 </div>
 
@@ -524,12 +465,7 @@
         <span id="toast-msg">OK</span>
     </div>
 
-    <!-- Firebase SDKs (CDN) -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-
     <script>
-        // Configurazione e connessione a Firebase Cloud
         const firebaseConfig = {
             apiKey: "AIzaSyC02BYD_TjOUEa3qDeJlh9c5sPzBhv42Ic",
             authDomain: "shredlog-sync.firebaseapp.com",
@@ -550,14 +486,7 @@
 
         function getDefaultState() {
             return {
-                settings: {
-                    rateScuolaInd: 40,
-                    rateScuolaCol: 42,
-                    rateClubHourly: 35,
-                    seasonGoal: 12000,
-                    taxReservePct: 15,
-                    lastWaxDate: '2026-12-01'
-                },
+                settings: { rateScuolaInd: 40, rateScuolaCol: 42, rateClubHourly: 35, seasonGoal: 12000, taxReservePct: 15, lastWaxDate: '2026-12-01' },
                 clients: [
                     { id: 'c1', name: 'Lorenzo V.', stance: 'Regular', level: 'Avanzato', goal: 'FS 360', notes: '', skills: { 'Conduzione Base': 2, 'Carving': 1, 'Switch': 1, 'Box/Rail': 0, '180': 1, '360': 1, 'Grab': 2 } },
                     { id: 'c2', name: 'Chiara B.', stance: 'Goofy', level: 'Intermedio', goal: 'Conduzione', notes: '', skills: { 'Conduzione Base': 2, 'Carving': 2, 'Switch': 0, 'Box/Rail': 0, '180': 0, '360': 0, 'Grab': 1 } }
@@ -605,9 +534,7 @@
             setTimeout(() => t.classList.add('hidden'), 2500);
         }
 
-        function formatEuro(n) {
-            return Number(n || 0).toLocaleString('it-IT') + ' €';
-        }
+        function formatEuro(n) { return Number(n || 0).toLocaleString('it-IT') + ' €'; }
 
         function formatDateIt(isoStr) {
             if (!isoStr) return '--';
@@ -623,20 +550,16 @@
                 
                 const deskNav = document.getElementById(`nav-${t}`);
                 if (deskNav) {
-                    if (t === tab) {
-                        deskNav.className = "nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-sm shadow-blue-500/10";
-                    } else {
-                        deskNav.className = "nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60";
-                    }
+                    deskNav.className = t === tab 
+                        ? "nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-sm shadow-blue-500/10" 
+                        : "nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60";
                 }
 
                 const mobNav = document.getElementById(`mob-nav-${t}`);
                 if (mobNav) {
-                    if (t === tab) {
-                        mobNav.className = "flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-bold transition text-blue-400 bg-blue-500/15";
-                    } else {
-                        mobNav.className = "flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400 hover:text-slate-200";
-                    }
+                    mobNav.className = t === tab 
+                        ? "flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-bold transition text-blue-400 bg-blue-500/15" 
+                        : "flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400 hover:text-slate-200";
                 }
             });
             refreshAllViews();
@@ -649,18 +572,13 @@
             const filtered = appState.clients.filter(c => c.name.toLowerCase().includes(query));
 
             let html = `<div onclick="selectClient('', '-- Nessun cliente specifico --')" class="px-3 py-2 hover:bg-slate-800 cursor-pointer text-slate-400 text-xs">-- Nessun cliente specifico --</div>`;
-            
             if (filtered.length > 0) {
                 html += filtered.map(c => `
                     <div onclick="selectClient('${c.id}', '${c.name.replace(/'/g, "\\'")}')" class="px-3 py-2 hover:bg-blue-600/20 hover:text-blue-300 cursor-pointer text-slate-200 text-xs flex items-center justify-between">
-                        <span>${c.name}</span>
-                        <span class="text-[10px] text-slate-400 font-mono">${c.level || 'Base'}</span>
+                        <span>${c.name}</span><span class="text-[10px] text-slate-400 font-mono">${c.level || 'Base'}</span>
                     </div>
                 `).join('');
-            } else {
-                html += `<div class="px-3 py-2 text-slate-500 text-xs">Nessun cliente trovato</div>`;
             }
-
             listEl.innerHTML = html;
         }
 
@@ -679,9 +597,7 @@
             const query = document.getElementById('clientSearchInput').value;
             renderClientDropdownOptions(query);
             document.getElementById('clientDropdownList').classList.remove('hidden');
-            if (!query.trim()) {
-                document.getElementById('lessonClient').value = '';
-            }
+            if (!query.trim()) document.getElementById('lessonClient').value = '';
         }
 
         function selectClient(id, name) {
@@ -692,18 +608,13 @@
 
         window.addEventListener('click', function(e) {
             const wrap = document.getElementById('lessonClientWrapper');
-            if (wrap && !wrap.contains(e.target)) {
-                const listEl = document.getElementById('clientDropdownList');
-                if (listEl) listEl.classList.add('hidden');
-            }
+            if (wrap && !wrap.contains(e.target)) document.getElementById('clientDropdownList')?.classList.add('hidden');
         });
 
         function computeDefaultNet(entity, type, hours) {
             const s = appState.settings;
             const h = parseFloat(hours) || 1;
-            if (entity === 'scuola') {
-                return type === 'collettiva' ? h * s.rateScuolaCol : h * s.rateScuolaInd;
-            }
+            if (entity === 'scuola') return type === 'collettiva' ? h * s.rateScuolaCol : h * s.rateScuolaInd;
             return 3 * s.rateClubHourly;
         }
 
@@ -711,8 +622,7 @@
             const entity = document.getElementById('lessonEntity').value;
             const type = document.getElementById('lessonType').value;
             const hours = entity === 'club' ? 3 : (parseFloat(document.getElementById('lessonHours').value) || 2);
-            const input = document.getElementById('lessonNetAmount');
-            input.value = computeDefaultNet(entity, type, hours);
+            document.getElementById('lessonNetAmount').value = computeDefaultNet(entity, type, hours);
         }
 
         function selectLessonEntity(entity) {
@@ -821,16 +731,13 @@
 
             const filtered = appState.lessons.filter(l => {
                 if (fEntity !== 'all' && l.entity !== fEntity) return false;
-                if (fMonth !== 'all') {
-                    const m = l.date.split('-')[1];
-                    if (m !== fMonth) return false;
-                }
+                if (fMonth !== 'all' && l.date.split('-')[1] !== fMonth) return false;
                 if (fType !== 'all' && l.type !== fType) return false;
                 return true;
             });
 
             if (filtered.length === 0) {
-                container.innerHTML = `<div class="glass-card rounded-xl p-6 text-center text-slate-400 text-xs">Nessuna lezione trovata con i filtri selezionati.</div>`;
+                container.innerHTML = `<div class="glass-card rounded-xl p-6 text-center text-slate-400 text-xs">Nessuna lezione trovata.</div>`;
                 return;
             }
 
@@ -846,9 +753,7 @@
                             </div>
                             <div class="text-slate-400 mt-0.5">${client ? client.name : 'Nessun cliente'} &bull; ${l.slot} (${l.hours}h) ${l.notes ? ' &bull; ' + l.notes : ''}</div>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <button onclick="deleteLesson('${l.id}')" class="text-rose-400 hover:text-rose-300 p-1" title="Elimina">✕</button>
-                        </div>
+                        <button onclick="deleteLesson('${l.id}')" class="text-rose-400 hover:text-rose-300 p-1">✕</button>
                     </div>
                 `;
             }).join('');
@@ -858,36 +763,26 @@
             currentDetailClientId = clientId;
             const c = appState.clients.find(x => x.id === clientId);
             if (!c) return;
-
             document.getElementById('modal-detail-name').textContent = c.name;
             document.getElementById('modal-detail-stance').textContent = c.stance || 'Regular';
             document.getElementById('modal-detail-level').textContent = c.level || 'Base';
-
+            
             const goalBox = document.getElementById('modal-detail-goal-box');
-            if (c.goal) {
-                goalBox.classList.remove('hidden');
-                document.getElementById('modal-detail-goal').textContent = c.goal;
-            } else {
-                goalBox.classList.add('hidden');
-            }
+            if (c.goal) { goalBox.classList.remove('hidden'); document.getElementById('modal-detail-goal').textContent = c.goal; }
+            else { goalBox.classList.add('hidden'); }
 
             renderModalDetailSkills(c);
             renderModalDetailLessons(c.id);
-
             document.getElementById('client-detail-modal').classList.remove('hidden');
         }
 
-        function closeClientDetailModal() {
-            document.getElementById('client-detail-modal').classList.add('hidden');
-            currentDetailClientId = null;
-        }
+        function closeClientDetailModal() { document.getElementById('client-detail-modal').classList.add('hidden'); currentDetailClientId = null; }
 
         function renderModalDetailSkills(c) {
             const container = document.getElementById('modal-detail-skills');
             if (!container) return;
             const skillList = ['Conduzione Base', 'Carving', 'Switch', 'Box/Rail', '180', '360', 'Grab'];
             if (!c.skills) c.skills = {};
-
             container.innerHTML = skillList.map(sk => {
                 const status = c.skills[sk] || 0;
                 let bgClass = 'bg-slate-800 text-slate-400 border-slate-700';
@@ -901,8 +796,7 @@
             const c = appState.clients.find(x => x.id === clientId);
             if (!c) return;
             if (!c.skills) c.skills = {};
-            const current = c.skills[skillName] || 0;
-            c.skills[skillName] = (current + 1) % 3;
+            c.skills[skillName] = ((c.skills[skillName] || 0) + 1) % 3;
             saveState();
             renderModalDetailSkills(c);
         }
@@ -911,29 +805,17 @@
             const container = document.getElementById('modal-detail-lessons');
             if (!container) return;
             const cLessons = appState.lessons.filter(l => l.clientId === clientId);
-
-            if (cLessons.length === 0) {
-                container.innerHTML = `<div class="p-3 bg-slate-900/50 rounded-xl text-slate-400 text-xs text-center">Nessuna lezione registrata con questo cliente.</div>`;
-                return;
-            }
-
+            if (cLessons.length === 0) { container.innerHTML = `<div class="p-3 bg-slate-900/50 rounded-xl text-slate-400 text-xs text-center">Nessuna lezione.</div>`; return; }
             container.innerHTML = cLessons.map(l => `
-                <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between text-xs">
-                    <div>
-                        <div class="flex items-center gap-2 font-bold text-white">
-                            <span>${formatDateIt(l.date)}</span>
-                            <span class="text-blue-400 font-mono">${l.slot} (${l.hours}h)</span>
-                        </div>
-                        <div class="text-slate-400 text-[11px] mt-0.5">${l.notes ? l.notes : 'Nessuna nota'}</div>
-                    </div>
+                <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 flex justify-between text-xs">
+                    <div><span class="font-bold text-white">${formatDateIt(l.date)}</span> - <span class="text-blue-400 font-mono">${l.slot} (${l.hours}h)</span></div>
                     <span class="font-mono text-emerald-400">${formatEuro(l.netAmount)}</span>
                 </div>
             `).join('');
         }
 
         function openClientModal(id = null) {
-            const modal = document.getElementById('client-modal');
-            if (modal) modal.classList.remove('hidden');
+            document.getElementById('client-modal').classList.remove('hidden');
             if (id) {
                 const c = appState.clients.find(x => x.id === id);
                 if (!c) return;
@@ -946,16 +828,12 @@
                 document.getElementById('clientNotes').value = c.notes || '';
             } else {
                 document.getElementById('client-modal-title').textContent = 'Nuovo Cliente';
-                const form = document.getElementById('client-form');
-                if (form) form.reset();
+                document.getElementById('client-form').reset();
                 document.getElementById('clientId').value = '';
             }
         }
 
-        function closeClientModal() {
-            const modal = document.getElementById('client-modal');
-            if (modal) modal.classList.add('hidden');
-        }
+        function closeClientModal() { document.getElementById('client-modal').classList.add('hidden'); }
 
         function saveClient(e) {
             e.preventDefault();
@@ -969,13 +847,8 @@
                 notes: document.getElementById('clientNotes').value.trim(),
                 skills: {}
             };
-
             const existing = appState.clients.find(x => x.id === client.id);
-            if (existing && existing.skills) {
-                client.skills = existing.skills;
-            } else {
-                client.skills = { 'Conduzione Base': 0, 'Carving': 0, 'Switch': 0, 'Box/Rail': 0, '180': 0, '360': 0, 'Grab': 0 };
-            }
+            client.skills = (existing && existing.skills) ? existing.skills : { 'Conduzione Base': 0, 'Carving': 0, 'Switch': 0, 'Box/Rail': 0, '180': 0, '360': 0, 'Grab': 0 };
 
             if (id) {
                 const idx = appState.clients.findIndex(x => x.id === id);
@@ -983,7 +856,6 @@
             } else {
                 appState.clients.push(client);
             }
-
             closeClientModal();
             saveState();
             showToast('Cliente salvato!');
@@ -1000,66 +872,41 @@
             const badgeCount = document.getElementById('badge-clienti-count');
             if (badgeCount) badgeCount.textContent = appState.clients.length;
             if (!grid) return;
-
-            if (appState.clients.length === 0) {
-                grid.innerHTML = `<div class="glass-card rounded-2xl p-6 text-center text-slate-400 text-xs col-span-3">Nessun cliente in rubrica. Clicca su "+ Nuovo Cliente".</div>`;
-                return;
-            }
-
-            grid.innerHTML = appState.clients.map(c => {
-                return `
-                    <div onclick="openClientDetailModal('${c.id}')" class="glass-card rounded-2xl p-4 space-y-2.5 cursor-pointer hover:border-blue-500/40 transition group">
-                        <div class="flex items-start justify-between">
-                            <div>
-                                <h3 class="font-bold text-white text-base group-hover:text-blue-400 transition">${c.name}</h3>
-                                <p class="text-xs text-slate-400 mt-0.5">Stance: <strong class="text-slate-200">${c.stance || 'Regular'}</strong> &bull; Livello: <strong class="text-blue-400">${c.level || 'Base'}</strong></p>
-                            </div>
-                            <div class="flex items-center gap-1" onclick="event.stopPropagation()">
-                                <button onclick="openClientModal('${c.id}')" class="p-1 text-slate-400 hover:text-white" title="Modifica">✏️</button>
-                                <button onclick="deleteClient('${c.id}')" class="p-1 text-rose-400 hover:text-rose-300" title="Elimina">✕</button>
-                            </div>
+            if (appState.clients.length === 0) { grid.innerHTML = `<div class="glass-card rounded-2xl p-6 text-center text-slate-400 text-xs col-span-3">Nessun cliente.</div>`; return; }
+            grid.innerHTML = appState.clients.map(c => `
+                <div onclick="openClientDetailModal('${c.id}')" class="glass-card rounded-2xl p-4 space-y-2.5 cursor-pointer hover:border-blue-500/40 transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-white text-base">${c.name}</h3>
+                            <p class="text-xs text-slate-400">Stance: <strong>${c.stance || 'Regular'}</strong> &bull; Livello: <strong class="text-blue-400">${c.level || 'Base'}</strong></p>
                         </div>
-                        ${c.goal ? `<p class="text-[11px] text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-lg truncate">🎯 <strong>${c.goal}</strong></p>` : ''}
-                        <div class="text-[10px] text-slate-500 pt-1 flex items-center justify-between">
-                            <span>Clicca per dettagli & lezioni</span>
-                            <span class="text-blue-400 font-bold">&rarr;</span>
-                        </div>
+                        <button onclick="event.stopPropagation(); deleteClient('${c.id}')" class="text-rose-400 text-xs">✕</button>
                     </div>
-                `;
-            }).join('');
+                    ${c.goal ? `<p class="text-[11px] text-blue-300 bg-blue-500/10 p-1.5 rounded-lg truncate">🎯 <strong>${c.goal}</strong></p>` : ''}
+                </div>
+            `).join('');
         }
 
-        function openDeadlineModal() {
-            const modal = document.getElementById('deadline-modal');
-            if (modal) modal.classList.remove('hidden');
-        }
-
-        function closeDeadlineModal() {
-            const modal = document.getElementById('deadline-modal');
-            if (modal) modal.classList.add('hidden');
-        }
+        function openDeadlineModal() { document.getElementById('deadline-modal').classList.remove('hidden'); }
+        function closeDeadlineModal() { document.getElementById('deadline-modal').classList.add('hidden'); }
 
         function saveDeadline(e) {
             e.preventDefault();
-            const dl = {
+            appState.deadlines.push({
                 id: 'dl_' + Date.now(),
                 title: document.getElementById('dlTitle').value.trim(),
                 date: document.getElementById('dlDate').value,
                 category: document.getElementById('dlCategory').value,
                 done: false
-            };
-            appState.deadlines.push(dl);
+            });
             closeDeadlineModal();
             saveState();
-            showToast('Scadenza aggiunta!');
+            showToast('Scadenza salvata!');
         }
 
         function toggleDeadlineDone(id) {
             const d = appState.deadlines.find(x => x.id === id);
-            if (d) {
-                d.done = !d.done;
-                saveState();
-            }
+            if (d) { d.done = !d.done; saveState(); }
         }
 
         function deleteDeadline(id) {
@@ -1069,13 +916,7 @@
 
         function toggleCompletedDeadlines() {
             showCompletedDeadlinesState = !showCompletedDeadlinesState;
-            const btn = document.getElementById('btn-toggle-completed');
-            if (btn) {
-                btn.textContent = showCompletedDeadlinesState ? 'Nascondi Completate' : 'Mostra Completate';
-                btn.className = showCompletedDeadlinesState 
-                    ? 'px-3 py-2 rounded-xl bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-500/40' 
-                    : 'px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700';
-            }
+            document.getElementById('btn-toggle-completed').textContent = showCompletedDeadlinesState ? 'Nascondi Completate' : 'Mostra Completate';
             renderDeadlines();
         }
 
@@ -1083,36 +924,26 @@
             const container = document.getElementById('deadlines-list');
             const alertDot = document.getElementById('badge-scadenze-alert');
             if (!container) return;
-
             const pending = appState.deadlines.filter(d => !d.done);
             if (alertDot) alertDot.classList.toggle('hidden', pending.length === 0);
-
             const displayList = appState.deadlines.filter(d => showCompletedDeadlinesState || !d.done);
-
-            if (displayList.length === 0) {
-                container.innerHTML = `<div class="p-4 rounded-xl bg-slate-900/50 text-slate-400 text-xs text-center">Nessuna scadenza in programma.</div>`;
-                return;
-            }
-
+            if (displayList.length === 0) { container.innerHTML = `<div class="p-4 bg-slate-900/50 text-slate-400 text-xs text-center">Nessuna scadenza.</div>`; return; }
             container.innerHTML = displayList.map(d => `
-                <div class="p-3.5 rounded-xl border flex items-center justify-between text-xs gap-3 ${d.done ? 'bg-slate-900/40 border-slate-800 opacity-60' : 'glass-card border-slate-700/80'}">
+                <div class="p-3.5 rounded-xl border flex justify-between items-center text-xs ${d.done ? 'bg-slate-900/40 opacity-60' : 'glass-card'}">
                     <div class="flex items-center gap-3">
-                        <button onclick="toggleDeadlineDone('${d.id}')" class="w-6 h-6 rounded-lg border flex items-center justify-center transition ${d.done ? 'bg-emerald-500 border-emerald-400 text-slate-950 font-bold' : 'border-slate-600 hover:border-blue-400 text-transparent'}">✓</button>
+                        <button onclick="toggleDeadlineDone('${d.id}')" class="w-6 h-6 rounded-lg border flex items-center justify-center ${d.done ? 'bg-emerald-500 text-slate-950 font-bold' : 'border-slate-600'}">✓</button>
                         <div>
                             <h4 class="font-bold ${d.done ? 'line-through text-slate-400' : 'text-white'}">${d.title}</h4>
-                            <p class="text-[11px] text-slate-400">${d.category} &bull; Scadenza: <strong class="text-blue-300">${formatDateIt(d.date)}</strong></p>
+                            <p class="text-[11px] text-slate-400">${d.category} &bull; ${formatDateIt(d.date)}</p>
                         </div>
                     </div>
-                    <div class="flex items-center gap-1.5">
-                        <button onclick="deleteDeadline('${d.id}')" class="p-1.5 text-rose-400 hover:text-rose-300 transition" title="Elimina">✕</button>
-                    </div>
+                    <button onclick="deleteDeadline('${d.id}')" class="text-rose-400">✕</button>
                 </div>
             `).join('');
         }
 
         function openSettingsModal() {
-            const m = document.getElementById('settings-modal');
-            if (m) m.classList.remove('hidden');
+            document.getElementById('settings-modal').classList.remove('hidden');
             document.getElementById('setSeasonGoal').value = appState.settings.seasonGoal || 12000;
             document.getElementById('setRateScuolaInd').value = appState.settings.rateScuolaInd;
             document.getElementById('setRateScuolaCol').value = appState.settings.rateScuolaCol;
@@ -1120,10 +951,7 @@
             document.getElementById('setTaxReserve').value = appState.settings.taxReservePct;
         }
 
-        function closeSettingsModal() {
-            const m = document.getElementById('settings-modal');
-            if (m) m.classList.add('hidden');
-        }
+        function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
 
         function saveSettings() {
             appState.settings.seasonGoal = parseFloat(document.getElementById('setSeasonGoal').value) || 12000;
@@ -1131,54 +959,37 @@
             appState.settings.rateScuolaCol = parseFloat(document.getElementById('setRateScuolaCol').value) || 42;
             appState.settings.rateClubHourly = parseFloat(document.getElementById('setRateClubHourly').value) || 35;
             appState.settings.taxReservePct = parseFloat(document.getElementById('setTaxReserve').value) || 15;
-
-            appState.lessons.forEach(l => {
-                l.netAmount = computeDefaultNet(l.entity, l.type, l.hours);
-            });
-
+            appState.lessons.forEach(l => { l.netAmount = computeDefaultNet(l.entity, l.type, l.hours); });
             closeSettingsModal();
             saveState();
-            showToast('Impostazioni aggiornate!');
         }
 
         function resetWaxCounter() {
             appState.settings.lastWaxDate = new Date().toISOString().split('T')[0];
             saveState();
-            showToast('Manutenzione tavola registrata oggi!');
+            showToast('Manutenzione registrata!');
         }
 
         function updateDashboardAndKPIs() {
             const s = appState.settings;
-            let totalNet = 0;
-            let hoursScuola = 0;
-            let hoursClub = 0;
-            let euroScuola = 0;
-            let euroClub = 0;
+            let totalNet = 0, hoursScuola = 0, hoursClub = 0, euroScuola = 0, euroClub = 0;
             let daysSet = new Set();
 
             appState.lessons.forEach(l => {
                 totalNet += l.netAmount;
                 daysSet.add(l.date);
-                if (l.entity === 'scuola') {
-                    hoursScuola += l.hours;
-                    euroScuola += l.netAmount;
-                } else {
-                    hoursClub += l.hours;
-                    euroClub += l.netAmount;
-                }
+                if (l.entity === 'scuola') { hoursScuola += l.hours; euroScuola += l.netAmount; }
+                else { hoursClub += l.hours; euroClub += l.netAmount; }
             });
 
             const totalHours = hoursScuola + hoursClub;
-            const taxNet = totalNet * (s.taxReservePct / 100);
             const avgHourly = totalHours > 0 ? totalNet / totalHours : 0;
 
             document.getElementById('headerRateScuola').textContent = s.rateScuolaInd + '€/h';
             document.getElementById('headerRateClub').textContent = s.rateClubHourly + '€/h';
-
             document.getElementById('kpi-total-net').textContent = formatEuro(totalNet);
             document.getElementById('kpi-paid-net').textContent = formatEuro(totalNet);
-            document.getElementById('kpi-tax-net').textContent = formatEuro(taxNet);
-
+            document.getElementById('kpi-tax-net').textContent = formatEuro(totalNet * (s.taxReservePct / 100));
             document.getElementById('kpi-total-hours').textContent = totalHours.toFixed(1) + 'h';
             document.getElementById('kpi-days-count').textContent = `(${daysSet.size} giornate)`;
             document.getElementById('kpi-hours-scuola').textContent = hoursScuola.toFixed(1) + 'h';
@@ -1187,7 +998,6 @@
             const scuolaPct = totalHours > 0 ? (hoursScuola / totalHours) * 100 : 50;
             document.getElementById('bar-hours-scuola').style.width = scuolaPct + '%';
             document.getElementById('bar-hours-club').style.width = (100 - scuolaPct) + '%';
-
             document.getElementById('kpi-euro-scuola').textContent = formatEuro(euroScuola);
             document.getElementById('kpi-euro-club').textContent = formatEuro(euroClub);
             document.getElementById('kpi-avg-hourly').textContent = avgHourly.toFixed(2).replace('.', ',') + ' €/h';
@@ -1201,23 +1011,13 @@
 
             let hoursSinceWax = 0;
             const lastWaxTime = new Date(s.lastWaxDate || '2026-12-01').getTime();
-            appState.lessons.forEach(l => {
-                if (new Date(l.date).getTime() >= lastWaxTime) {
-                    hoursSinceWax += l.hours;
-                }
-            });
+            appState.lessons.forEach(l => { if (new Date(l.date).getTime() >= lastWaxTime) hoursSinceWax += l.hours; });
             document.getElementById('wax-hours-since').textContent = hoursSinceWax.toFixed(1) + 'h';
             document.getElementById('wax-last-date').textContent = formatDateIt(s.lastWaxDate || '2026-12-01');
-            const waxPct = Math.min(100, (hoursSinceWax / 25) * 100);
             const waxBar = document.getElementById('wax-progress-bar');
             if (waxBar) {
-                waxBar.style.width = waxPct + '%';
+                waxBar.style.width = Math.min(100, (hoursSinceWax / 25) * 100) + '%';
                 waxBar.className = hoursSinceWax >= 25 ? 'bg-rose-500 h-full' : 'bg-emerald-500 h-full';
-            }
-            const waxStatusBtn = document.getElementById('kpi-wax-status');
-            if (waxStatusBtn) {
-                waxStatusBtn.textContent = hoursSinceWax >= 25 ? 'MANUTENZIONE CONSIGLIATA' : 'OK';
-                waxStatusBtn.className = hoursSinceWax >= 25 ? 'font-mono font-semibold text-rose-400 hover:underline animate-pulse' : 'font-mono font-semibold text-emerald-400 hover:underline';
             }
 
             renderMonthlyChart();
@@ -1227,33 +1027,21 @@
         function renderMonthlyChart() {
             const chart = document.getElementById('monthly-chart');
             if (!chart) return;
-
-            const months = [
-                { num: '12', name: 'Dic' },
-                { num: '01', name: 'Gen' },
-                { num: '02', name: 'Feb' },
-                { num: '03', name: 'Mar' },
-                { num: '04', name: 'Apr' }
-            ];
-
+            const months = [{ num: '12', name: 'Dic' }, { num: '01', name: 'Gen' }, { num: '02', name: 'Feb' }, { num: '03', name: 'Mar' }, { num: '04', name: 'Apr' }];
             let totals = {};
             months.forEach(m => totals[m.num] = 0);
             appState.lessons.forEach(l => {
                 const m = l.date.split('-')[1];
-                if (totals[m] !== undefined) {
-                    totals[m] += l.netAmount;
-                }
+                if (totals[m] !== undefined) totals[m] += l.netAmount;
             });
-
             const maxVal = Math.max(100, ...Object.values(totals));
-
             chart.innerHTML = months.map(m => {
                 const val = totals[m.num];
                 const heightPct = Math.max(8, (val / maxVal) * 100);
                 return `
                     <div class="flex flex-col items-center gap-1.5 h-full justify-end">
                         <span class="text-[10px] font-mono text-slate-300">${val > 0 ? val + '€' : ''}</span>
-                        <div class="w-full bg-gradient-to-t from-blue-600 to-indigo-400 rounded-t-lg transition-all duration-500" style="height: ${heightPct}%"></div>
+                        <div class="w-full bg-gradient-to-t from-blue-600 to-indigo-400 rounded-t-lg transition-all" style="height: ${heightPct}%"></div>
                         <span class="text-xs font-semibold text-slate-400 mt-1">${m.name}</span>
                     </div>
                 `;
@@ -1263,26 +1051,13 @@
         function renderTypeBreakdown(scuolaH, clubH, scuolaE, clubE) {
             const container = document.getElementById('lesson-type-breakdown');
             if (!container) return;
-
             container.innerHTML = `
-                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                        <span class="w-3 h-3 rounded-full bg-red-500"></span>
-                        <div>
-                            <p class="font-bold text-white text-xs">Scuola</p>
-                            <p class="text-[11px] text-slate-400">${scuolaH.toFixed(1)} ore totali</p>
-                        </div>
-                    </div>
+                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center">
+                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-red-500"></span><div><p class="font-bold text-white text-xs">Scuola</p><p class="text-[11px] text-slate-400">${scuolaH.toFixed(1)}h</p></div></div>
                     <span class="font-mono font-bold text-red-400 text-sm">${formatEuro(scuolaE)}</span>
                 </div>
-                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
-                        <div>
-                            <p class="font-bold text-white text-xs">Club</p>
-                            <p class="text-[11px] text-slate-400">${clubH.toFixed(1)} ore totali</p>
-                        </div>
-                    </div>
+                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center">
+                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><div><p class="font-bold text-white text-xs">Club</p><p class="text-[11px] text-slate-400">${clubH.toFixed(1)}h</p></div></div>
                     <span class="font-mono font-bold text-emerald-400 text-sm">${formatEuro(clubE)}</span>
                 </div>
             `;
@@ -1296,10 +1071,7 @@
             updateDashboardAndKPIs();
             if (currentDetailClientId) {
                 const c = appState.clients.find(x => x.id === currentDetailClientId);
-                if (c) {
-                    renderModalDetailSkills(c);
-                    renderModalDetailLessons(c.id);
-                }
+                if (c) { renderModalDetailSkills(c); renderModalDetailLessons(c.id); }
             }
         }
 
@@ -1307,17 +1079,13 @@
             let csv = "Data,Ente,Tipologia,Ore,CompensoNetto,Cliente,Note\n";
             appState.lessons.forEach(l => {
                 const client = appState.clients.find(c => c.id === l.clientId);
-                const clientName = client ? client.name : '';
-                csv += `"${formatDateIt(l.date)}","${l.entity}","${l.type}",${l.hours},${l.netAmount},"${clientName}","${l.notes || ''}"\n`;
+                csv += `"${formatDateIt(l.date)}","${l.entity}","${l.type}",${l.hours},${l.netAmount},"${client ? client.name : ''}","${l.notes || ''}"\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.setAttribute('href', url);
-            a.setAttribute('download', 'shredlog_stagione.csv');
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            a.href = url; a.download = 'shredlog_stagione.csv';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
             showToast('CSV esportato!');
         }
 
