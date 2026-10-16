@@ -15,11 +15,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
   <script>
-        let appState = {
+let appState = {
             settings: { rateScuolaInd: 40, rateScuolaCol: 42, rateClubHourly: 35, seasonGoal: 12000, taxReservePct: 15, lastWaxDate: '2026-12-01' },
-            clients: [
-                { id: 'c1', name: 'Lorenzo V.', stance: 'Regular', level: 'Avanzato', goal: 'FS 360', notes: '', skills: { 'Conduzione Base': 2, 'Carving': 1, 'Switch': 1, 'Box/Rail': 0, '180': 1, '360': 1, 'Grab': 2 } }
-            ],
+            clients: [],
             lessons: [],
             deadlines: [
                 { id: 'd1', title: 'Fattura Mensile Scuola', category: 'fiscale', date: '2027-01-31', done: false }
