@@ -9,6 +9,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs (CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -86,7 +91,6 @@
             <div class="flex items-center gap-3">
                 <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-600 to-emerald-500 p-0.5 shadow-lg shadow-blue-500/20 flex items-center justify-center">
                     <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                        <!-- Logo con montagne stilizzate -->
                         <svg class="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M2 20l7-12 5 7 3-4 5 9H2z"></path>
                             <path d="M14 15l2-3 2 3"></path>
@@ -97,7 +101,7 @@
                     <div class="flex items-center gap-2">
                         <h1 class="font-extrabold text-lg sm:text-xl tracking-tight text-white">SHREDLOG <span class="text-blue-400 font-mono text-sm px-1.5 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded">PRO</span></h1>
                         <span class="hidden sm:inline-flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Stagione 2026/2027
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Cloud Sync Attiva
                         </span>
                     </div>
                     <p class="text-xs text-slate-400">Scuola &bull; Club &bull; Gestione Ore & Clienti</p>
@@ -133,44 +137,28 @@
 
         <nav class="max-w-7xl mx-auto mt-3 hidden md:flex items-center gap-2 border-t border-slate-800/80 pt-2.5">
             <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
                 Dashboard & Compensi
             </button>
             <button onclick="switchTab('lezioni')" id="nav-lezioni" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                Registro Ore & Lezioni
+                Registro Ore & Lezioni 
                 <span id="badge-lezioni-count" class="ml-1 text-xs font-mono px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded-md">0</span>
             </button>
             <button onclick="switchTab('clienti')" id="nav-clienti" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                Clienti & Livello Tecnico
+                Clienti & Livello Tecnico 
                 <span id="badge-clienti-count" class="ml-1 text-xs font-mono px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded-md">0</span>
             </button>
             <button onclick="switchTab('scadenze')" id="nav-scadenze" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-                Scadenze, Fisco & Attrezzatura
+                Scadenze, Fisco & Attrezzatura 
                 <span id="badge-scadenze-alert" class="hidden w-2 h-2 rounded-full bg-blue-500"></span>
             </button>
         </nav>
     </header>
 
     <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-card border-t border-slate-800 px-2 py-1.5 flex justify-around items-center">
-        <button onclick="switchTab('dashboard')" id="mob-nav-dashboard" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400">
-            <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
-            <span>Dashboard</span>
-        </button>
-        <button onclick="switchTab('lezioni')" id="mob-nav-lezioni" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400">
-            <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span>Ore & Log</span>
-        </button>
-        <button onclick="switchTab('clienti')" id="mob-nav-clienti" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400">
-            <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            <span>Rider</span>
-        </button>
-        <button onclick="switchTab('scadenze')" id="mob-nav-scadenze" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400">
-            <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-            <span>Scadenze</span>
-        </button>
+        <button onclick="switchTab('dashboard')" id="mob-nav-dashboard" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400"><span>Dashboard</span></button>
+        <button onclick="switchTab('lezioni')" id="mob-nav-lezioni" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400"><span>Ore & Log</span></button>
+        <button onclick="switchTab('clienti')" id="mob-nav-clienti" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400"><span>Rider</span></button>
+        <button onclick="switchTab('scadenze')" id="mob-nav-scadenze" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400"><span>Scadenze</span></button>
     </nav>
 
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -183,12 +171,8 @@
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
                     <div>
-                        <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                            Tariffe & Simulatore Compensi Attivi
-                        </h2>
-                        <p class="text-xs text-slate-300 mt-0.5">
-                            Gestisci le ore a Pila tra Scuola e Club con calcolo dei compensi in tempo reale.
-                        </p>
+                        <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">Tariffe & Simulatore Compensi Attivi</h2>
+                        <p class="text-xs text-slate-300 mt-0.5">Gestisci le ore a Pila tra Scuola e Club con calcolo dei compensi in tempo reale.</p>
                     </div>
                 </div>
                 <button onclick="openSettingsModal()" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs sm:text-sm font-semibold text-blue-300 transition flex items-center justify-center gap-2">
@@ -203,9 +187,6 @@
                             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Compenso Netto Totale</p>
                             <h3 class="text-2xl sm:text-3xl font-extrabold font-mono text-white mt-1" id="kpi-total-net">0 €</h3>
                         </div>
-                        <span class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        </span>
                     </div>
                     <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
                         <span class="text-slate-400">Incassato: <strong class="text-emerald-400 font-mono" id="kpi-paid-net">0 €</strong></span>
@@ -222,9 +203,6 @@
                                 <span class="text-xs text-slate-400" id="kpi-days-count">(0 giornate)</span>
                             </div>
                         </div>
-                        <span class="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        </span>
                     </div>
                     <div class="mt-4">
                         <div class="flex justify-between text-xs mb-1">
@@ -255,9 +233,6 @@
                                 </div>
                             </div>
                         </div>
-                        <span class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
-                        </span>
                     </div>
                     <div class="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
                         <span>Media Oraria:</span>
@@ -296,10 +271,6 @@
                         </div>
                     </div>
                     <div id="monthly-chart" class="grid grid-cols-5 gap-2 sm:gap-4 items-end h-52 pt-6 px-2 border-b border-slate-800"></div>
-                    <div class="mt-4 flex justify-between text-xs text-slate-400">
-                        <span>💡 Filtra i mesi dal Registro Ore.</span>
-                        <span id="best-month-badge" class="font-mono text-blue-400">Mese top: --</span>
-                    </div>
                 </div>
 
                 <div class="glass-card rounded-2xl p-5 flex flex-col justify-between">
@@ -315,7 +286,6 @@
         <!-- TAB 2: REGISTRO ORE -->
         <section id="tab-lezioni" class="hidden space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                
                 <div class="lg:col-span-4 glass-card rounded-2xl p-5 border border-blue-500/25 lg:sticky lg:top-28">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-base font-bold text-white flex items-center gap-2">
@@ -356,19 +326,14 @@
                                     <option value="15:00">15:00</option><option value="16:00">16:00</option>
                                 </select>
                                 <select id="lessonHours" onchange="onHoursOrStartChange()" class="bg-slate-900/90 border border-slate-700 rounded-xl px-2 py-2 text-white text-xs focus:outline-none shrink-0 w-20">
-                                    <option value="1">1h</option>
-                                    <option value="2" selected>2h</option>
-                                    <option value="3">3h</option>
-                                    <option value="4">4h</option>
-                                    <option value="5">5h</option>
-                                    <option value="6">6h</option>
+                                    <option value="1">1h</option><option value="2" selected>2h</option><option value="3">3h</option><option value="4">4h</option><option value="5">5h</option><option value="6">6h</option>
                                 </select>
-                                <div class="bg-slate-950/80 border border-slate-700/80 rounded-xl px-2.5 py-2 text-blue-400 font-mono text-xs flex items-center justify-center whitespace-nowrap overflow-hidden text-ellipsis flex-1 tracking-wide" id="calculatedSlotText">
+                                <div class="bg-slate-950/80 border border-slate-700/80 rounded-xl px-2.5 py-2 text-blue-400 font-mono text-xs flex items-center justify-center flex-1" id="calculatedSlotText">
                                     09:00 - 11:00
                                 </div>
                             </div>
                             <div id="slotContainerClub" class="hidden w-full">
-                                <select id="lessonClubSlot" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none whitespace-nowrap">
+                                <select id="lessonClubSlot" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
                                     <option value="09:00 - 12:00">09:00 - 12:00 (Mattina)</option>
                                     <option value="14:00 - 17:00">14:00 - 17:00 (Pomeriggio)</option>
                                 </select>
@@ -386,34 +351,23 @@
                         <div id="lessonClientWrapper" class="relative">
                             <label class="block text-xs text-slate-400 mb-1">Cliente / Allievo</label>
                             <div class="relative">
-                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                                </span>
-                                <input type="text" id="clientSearchInput" oninput="onClientSearchInput()" onclick="toggleClientDropdown(true)" placeholder="Cerca cliente..." autocomplete="off" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-9 pr-8 py-2 text-white text-xs focus:outline-none focus:border-blue-400">
+                                <input type="text" id="clientSearchInput" oninput="onClientSearchInput()" onclick="toggleClientDropdown(true)" placeholder="Cerca cliente..." autocomplete="off" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
                                 <input type="hidden" id="lessonClient" value="">
-                                <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-                                </span>
                             </div>
                             <div id="clientDropdownList" class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto hidden"></div>
                         </div>
 
                         <div class="p-3 rounded-xl bg-slate-900/95 border border-slate-700/80 space-y-1.5">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-slate-300 font-medium">Compenso Netto (Calcolato):</span>
-                            </div>
-                            <div>
-                                <input type="number" id="lessonNetAmount" step="0.5" min="0" required class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-emerald-400 font-mono font-bold text-sm focus:outline-none" readonly>
-                            </div>
-                            <p id="lessonRateHint" class="text-[11px] text-slate-400">Tariffa automatica applicata</p>
+                            <span class="text-xs text-slate-300 font-medium">Compenso Netto (Calcolato):</span>
+                            <input type="number" id="lessonNetAmount" step="0.5" min="0" required class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-emerald-400 font-mono font-bold text-sm" readonly>
                         </div>
 
                         <div>
                             <label class="block text-xs text-slate-400 mb-1">Note / Focus</label>
-                            <input type="text" id="lessonNotes" placeholder="Es. Lavorato su FS 360..." class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+                            <input type="text" id="lessonNotes" placeholder="Es. Lavorato su FS 360..." class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs">
                         </div>
 
-                        <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/20 transition">
+                        <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/20 transition">
                             Salva
                         </button>
                     </form>
@@ -423,34 +377,26 @@
                     <div class="glass-card rounded-2xl p-4 space-y-3">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <h3 class="font-bold text-white text-base">Storico Ore & Compensi</h3>
-                            <div class="flex items-center gap-2">
-                                <button onclick="exportCSV()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition">
-                                    Esporta CSV
-                                </button>
-                            </div>
+                            <button onclick="exportCSV()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium">Esporta CSV</button>
                         </div>
-
                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
                             <select id="filterEntity" onchange="renderLessons()" class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
                                 <option value="all">Tutti (Scuola + Club)</option>
-                                <option value="scuola">&#128308; Solo Scuola</option>
-                                <option value="club">&#128994; Solo Club</option>
+                                <option value="scuola">Solo Scuola</option>
+                                <option value="club">Solo Club</option>
                             </select>
                             <select id="filterMonth" onchange="renderLessons()" class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
                                 <option value="all">Tutti i Mesi</option>
-                                <option value="12">Dicembre</option>
-                                <option value="01">Gennaio</option><option value="02">Febbraio</option>
-                                <option value="03">Marzo</option><option value="04">Aprile</option>
+                                <option value="12">Dicembre</option><option value="01">Gennaio</option><option value="02">Febbraio</option><option value="03">Marzo</option><option value="04">Aprile</option>
                             </select>
                             <select id="filterType" onchange="renderLessons()" class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
                                 <option value="all">Tutte le Tipologie</option>
-                                <option value="individuale">Individuale (Scuola)</option>
-                                <option value="collettiva">Collettiva (Scuola)</option>
-                                <option value="club_gruppo">Gruppo (Club)</option>
+                                <option value="individuale">Individuale</option>
+                                <option value="collettiva">Collettiva</option>
+                                <option value="club_gruppo">Gruppo Club</option>
                             </select>
                         </div>
                     </div>
-
                     <div id="lessons-list-container" class="space-y-2.5"></div>
                 </div>
             </div>
@@ -461,13 +407,10 @@
             <div class="glass-card rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-lg font-bold text-white">Rubrica Clienti (Rider Tracker)</h2>
-                    <p class="text-xs text-slate-400">Clicca su un cliente per aprire la scheda dettagliata, le abilità e le lezioni passate.</p>
+                    <p class="text-xs text-slate-400">Clicca su un cliente per aprire la scheda dettagliata e le abilità.</p>
                 </div>
-                <button onclick="openClientModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/20 transition flex items-center gap-2 shrink-0">
-                    + Nuovo Cliente
-                </button>
+                <button onclick="openClientModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs shadow-lg">+ Nuovo Cliente</button>
             </div>
-
             <div id="clients-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </section>
 
@@ -477,23 +420,15 @@
                 <div class="lg:col-span-2 space-y-4">
                     <div class="glass-card rounded-2xl p-5 space-y-4">
                         <div class="flex flex-wrap items-center justify-between gap-2">
-                            <div>
-                                <h3 class="font-bold text-white text-base">Agenda Scadenze Fiscali & Formative</h3>
-                                <p class="text-xs text-slate-400">Gestisci adempimenti, corsi e fatture</p>
-                            </div>
+                            <h3 class="font-bold text-white text-base">Agenda Scadenze Fiscali & Formative</h3>
                             <div class="flex items-center gap-2">
-                                <button onclick="toggleCompletedDeadlines()" id="btn-toggle-completed" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700">
-                                    Mostra Completate
-                                </button>
-                                <button onclick="openDeadlineModal()" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md">
-                                    + Nuova Scadenza
-                                </button>
+                                <button onclick="toggleCompletedDeadlines()" id="btn-toggle-completed" class="px-3 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Mostra Completate</button>
+                                <button onclick="openDeadlineModal()" class="px-3.5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs">+ Nuova Scadenza</button>
                             </div>
                         </div>
                         <div id="deadlines-list" class="space-y-2.5 pt-2"></div>
                     </div>
                 </div>
-
                 <div class="space-y-4">
                     <div class="glass-card rounded-2xl p-5">
                         <h3 class="font-bold text-white text-base mb-3">Manutenzione Tavola (Sciolina & Lamine)</h3>
@@ -504,14 +439,11 @@
                                 <div id="wax-progress-bar" class="bg-emerald-500 h-full w-0"></div>
                             </div>
                         </div>
-                        <button onclick="resetWaxCounter()" class="w-full mt-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-blue-300 border border-slate-700">
-                            🔄 Ho fatto fare Sciolina & Lamine oggi
-                        </button>
+                        <button onclick="resetWaxCounter()" class="w-full mt-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-blue-300 border border-slate-700">🔄 Ho fatto fare Sciolina & Lamine oggi</button>
                     </div>
                 </div>
             </div>
         </section>
-
     </main>
 
     <!-- MODAL DETTAGLIO CLIENTE -->
@@ -522,29 +454,18 @@
                     <h3 class="text-lg font-extrabold text-white" id="modal-detail-name">Nome Cliente</h3>
                     <p class="text-xs text-slate-400 mt-0.5">Stance: <strong class="text-slate-200" id="modal-detail-stance">Regular</strong> &bull; Livello: <strong class="text-blue-400" id="modal-detail-level">Base</strong></p>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="openClientModal(currentDetailClientId); closeClientDetailModal();" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700">Modifica</button>
-                    <button onclick="closeClientDetailModal()" class="text-slate-400 hover:text-white p-1 text-lg font-bold">✕</button>
-                </div>
+                <button onclick="closeClientDetailModal()" class="text-slate-400 hover:text-white p-1 text-lg font-bold">✕</button>
             </div>
-
-            <div id="modal-detail-goal-box" class="hidden p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300">
-                🎯 Obiettivo: <strong id="modal-detail-goal">--</strong>
-            </div>
-
+            <div id="modal-detail-goal-box" class="hidden p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300">🎯 Obiettivo: <strong id="modal-detail-goal">--</strong></div>
             <div class="space-y-2">
-                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Progressione Tecnica (Clicca per aggiornare):</span>
+                <span class="text-xs font-semibold text-slate-400 uppercase">Progressione Tecnica:</span>
                 <div class="flex flex-wrap gap-1.5" id="modal-detail-skills"></div>
             </div>
-
             <div class="space-y-2.5 pt-2 border-t border-slate-800">
-                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Storico Lezioni Passate:</span>
-                <div id="modal-detail-lessons" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+                <span class="text-xs font-semibold text-slate-400 uppercase">Storico Lezioni:</span>
+                <div id="modal-detail-lessons" class="space-y-2 max-h-48 overflow-y-auto"></div>
             </div>
-
-            <div class="flex justify-end pt-2 border-t border-slate-800">
-                <button onclick="closeClientDetailModal()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs">Chiudi</button>
-            </div>
+            <div class="flex justify-end pt-2 border-t border-slate-800"><button onclick="closeClientDetailModal()" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs">Chiudi</button></div>
         </div>
     </div>
 
@@ -553,74 +474,33 @@
         <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-700">
             <h3 class="text-base font-bold text-white">Configurazione Tariffe & Fisco</h3>
             <div class="space-y-3 text-xs">
-                <div>
-                    <label class="block text-slate-400 mb-1">Target Economico Stagione (€)</label>
-                    <input type="number" id="setSeasonGoal" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono">
-                </div>
-                <div>
-                    <label class="block text-slate-400 mb-1">Tariffa Scuola Individuale (€/h)</label>
-                    <input type="number" id="setRateScuolaInd" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
-                </div>
-                <div>
-                    <label class="block text-slate-400 mb-1">Tariffa Scuola Collettiva (€/h)</label>
-                    <input type="number" id="setRateScuolaCol" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
-                </div>
-                <div>
-                    <label class="block text-slate-400 mb-1">Tariffa Club (€/h)</label>
-                    <input type="number" id="setRateClubHourly" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
-                </div>
-                <div>
-                    <label class="block text-slate-400 mb-1">% Accantonamento Tasse/Contributi</label>
-                    <input type="number" id="setTaxReserve" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
-                </div>
+                <div><label class="block text-slate-400 mb-1">Target Economico Stagione (€)</label><input type="number" id="setSeasonGoal" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono"></div>
+                <div><label class="block text-slate-400 mb-1">Tariffa Scuola Individuale (€/h)</label><input type="number" id="setRateScuolaInd" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
+                <div><label class="block text-slate-400 mb-1">Tariffa Scuola Collettiva (€/h)</label><input type="number" id="setRateScuolaCol" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
+                <div><label class="block text-slate-400 mb-1">Tariffa Club (€/h)</label><input type="number" id="setRateClubHourly" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
+                <div><label class="block text-slate-400 mb-1">% Accantonamento Tasse</label><input type="number" id="setTaxReserve" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
             </div>
             <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
                 <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs">Annulla</button>
-                <button onclick="saveSettings()" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs">Salva</button>
+                <button onclick="saveSettings()" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs">Salva</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL CLIENTE (INSERIMENTO/MODIFICA) -->
+    <!-- MODAL CLIENTE -->
     <div id="client-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="glass-card rounded-2xl max-w-lg w-full p-6 space-y-4 border border-slate-700">
             <h3 class="text-base font-bold text-white" id="client-modal-title">Nuovo Cliente</h3>
             <form id="client-form" onsubmit="saveClient(event)" class="space-y-3 text-xs">
                 <input type="hidden" id="clientId" value="">
-                <div>
-                    <label class="block text-slate-400 mb-1">Nome e Cognome *</label>
-                    <input type="text" id="clientName" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
-                </div>
+                <div><label class="block text-slate-400 mb-1">Nome e Cognome *</label><input type="text" id="clientName" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
                 <div class="grid grid-cols-2 gap-2.5">
-                    <div>
-                        <label class="block text-slate-400 mb-1">Stance</label>
-                        <select id="clientStance" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none">
-                            <option value="Regular">Regular</option>
-                            <option value="Goofy">Goofy</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-slate-400 mb-1">Livello</label>
-                        <select id="clientLevel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none">
-                            <option value="Base">Base</option>
-                            <option value="Intermedio">Intermedio</option>
-                            <option value="Avanzato">Avanzato</option>
-                            <option value="Freestyle">Freestyle</option>
-                        </select>
-                    </div>
+                    <div><label class="block text-slate-400 mb-1">Stance</label><select id="clientStance" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"><option value="Regular">Regular</option><option value="Goofy">Goofy</option></select></div>
+                    <div><label class="block text-slate-400 mb-1">Livello</label><select id="clientLevel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"><option value="Base">Base</option><option value="Intermedio">Intermedio</option><option value="Avanzato">Avanzato</option><option value="Freestyle">Freestyle</option></select></div>
                 </div>
-                <div>
-                    <label class="block text-slate-400 mb-1">Obiettivo Principale</label>
-                    <input type="text" id="clientGoal" placeholder="Es. Chiusura FS 360" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
-                </div>
-                <div>
-                    <label class="block text-slate-400 mb-1">Note</label>
-                    <textarea id="clientNotes" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></textarea>
-                </div>
-                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                    <button type="button" onclick="closeClientModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300">Annulla</button>
-                    <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold">Salva</button>
-                </div>
+                <div><label class="block text-slate-400 mb-1">Obiettivo Principale</label><input type="text" id="clientGoal" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
+                <div><label class="block text-slate-400 mb-1">Note</label><textarea id="clientNotes" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></textarea></div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800"><button type="button" onclick="closeClientModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300">Annulla</button><button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold">Salva</button></div>
             </form>
         </div>
     </div>
@@ -630,26 +510,10 @@
         <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-700">
             <h3 class="text-base font-bold text-white">Nuova Scadenza</h3>
             <form onsubmit="saveDeadline(event)" class="space-y-3 text-xs">
-                <div>
-                    <label class="block text-slate-400 mb-1">Titolo / Attività *</label>
-                    <input type="text" id="dlTitle" required placeholder="Es. Corso aggiornamento maestri, F24..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
-                </div>
-                <div>
-                    <label class="block text-slate-400 mb-1">Data Scadenza *</label>
-                    <input type="date" id="dlDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
-                </div>
-                <div>
-                    <label class="block text-slate-400 mb-1">Categoria</label>
-                    <select id="dlCategory" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
-                        <option value="fiscale">Fiscale / Commercialista</option>
-                        <option value="formativa">Formazione / Aggiornamento</option>
-                        <option value="altro">Altro</option>
-                    </select>
-                </div>
-                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                    <button type="button" onclick="closeDeadlineModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300">Annulla</button>
-                    <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold">Salva</button>
-                </div>
+                <div><label class="block text-slate-400 mb-1">Titolo / Attività *</label><input type="text" id="dlTitle" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
+                <div><label class="block text-slate-400 mb-1">Data Scadenza *</label><input type="date" id="dlDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
+                <div><label class="block text-slate-400 mb-1">Categoria</label><select id="dlCategory" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"><option value="fiscale">Fiscale</option><option value="formativa">Formativa</option><option value="altro">Altro</option></select></div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800"><button type="button" onclick="closeDeadlineModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300">Annulla</button><button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold">Salva</button></div>
             </form>
         </div>
     </div>
@@ -660,7 +524,28 @@
         <span id="toast-msg">OK</span>
     </div>
 
+    <!-- Firebase SDKs (CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
     <script>
+        // Configurazione e connessione a Firebase Cloud
+        const firebaseConfig = {
+            apiKey: "AIzaSyC02BYD_TjOUEa3qDeJlh9c5sPzBhv42Ic",
+            authDomain: "shredlog-sync.firebaseapp.com",
+            databaseURL: "https://shredlog-sync-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "shredlog-sync",
+            storageBucket: "shredlog-sync.firebasestorage.app",
+            messagingSenderId: "68852713386",
+            appId: "1:68852713386:web:f0347df2c5c77702a70dd3",
+            measurementId: "G-2T9S1Y2GCJ"
+        };
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const dbRef = firebase.database().ref('shredlog_data');
+
         const STORAGE_KEY = 'pila_snowboard_pro_v5';
 
         function getDefaultState() {
@@ -688,6 +573,7 @@
         let appState = loadState();
         let showCompletedDeadlinesState = false;
         let currentDetailClientId = null;
+        let isSyncing = false;
 
         function loadState() {
             try {
@@ -701,10 +587,19 @@
         function saveState() {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
             refreshAllViews();
+
+            isSyncing = true;
+            dbRef.set(appState).then(() => {
+                setTimeout(() => { isSyncing = false; }, 500);
+            }).catch((err) => {
+                isSyncing = false;
+                console.error("Errore salvataggio Cloud:", err);
+            });
         }
 
         function showToast(msg) {
             const t = document.getElementById('toast');
+            if(!t) return;
             document.getElementById('toast-msg').textContent = msg;
             t.classList.remove('hidden');
             setTimeout(() => t.classList.add('hidden'), 2500);
@@ -747,7 +642,6 @@
             refreshAllViews();
         }
 
-        // --- GESTIONE RICERCA CLIENTE CON MENU A TENDINA DINAMICO ---
         function renderClientDropdownOptions(filterText = '') {
             const listEl = document.getElementById('clientDropdownList');
             if (!listEl) return;
@@ -896,7 +790,7 @@
 
             resetLessonForm();
             saveState();
-            showToast('Lezione salvata!');
+            showToast('Lezione salvata e sincronizzata!');
         }
 
         function resetLessonForm() {
@@ -960,7 +854,6 @@
             }).join('');
         }
 
-        // --- GESTIONE SCHEDA DETTAGLIO CLIENTE ---
         function openClientDetailModal(clientId) {
             currentDetailClientId = clientId;
             const c = appState.clients.find(x => x.id === clientId);
@@ -1432,7 +1325,31 @@
             const dateEl = document.getElementById('lessonDate');
             if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
             selectLessonEntity('scuola');
-            refreshAllViews();
+
+            dbRef.once('value').then((snapshot) => {
+                const cloudData = snapshot.val();
+                if (cloudData) {
+                    appState = cloudData;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+                } else {
+                    dbRef.set(appState);
+                }
+                refreshAllViews();
+            }).catch((err) => {
+                console.error("Modalità offline attiva:", err);
+                refreshAllViews();
+            });
+
+            dbRef.on('value', (snap) => {
+                if (isSyncing) return;
+                const cloudData = snap.val();
+                if (cloudData && JSON.stringify(cloudData) !== JSON.stringify(appState)) {
+                    appState = cloudData;
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+                    refreshAllViews();
+                    showToast('🔄 Dati aggiornati dal Cloud!');
+                }
+            });
         };
     </script>
 </body>
