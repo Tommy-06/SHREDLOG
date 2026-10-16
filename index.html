@@ -14,80 +14,603 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
-    <script>
-// Configurazione Firebase Cloud Sync
-const firebaseConfig = {
-    apiKey: "AIzaSyC02BYD_TjOUEa3qDeJlh9c5sPzBhv42Ic",
-    authDomain: "shredlog-sync.firebaseapp.com",
-    databaseURL: "https://shredlog-sync-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "shredlog-sync",
-    storageBucket: "shredlog-sync.firebasestorage.app",
-    messagingSenderId: "68852713386",
-    appId: "1:68852713386:web:f0347df2c5c77702a70dd3",
-    measurementId: "G-2T9S1Y2GCJ"
-};
-firebase.initializeApp(firebaseConfig);
-const dbRef = firebase.database().ref('shredlog_data');
+  <script>
+        let appState = {
+            settings: { rateScuolaInd: 40, rateScuolaCol: 42, rateClubHourly: 35, seasonGoal: 12000, taxReservePct: 15, lastWaxDate: '2026-12-01' },
+            clients: [
+                { id: 'c1', name: 'Lorenzo V.', stance: 'Regular', level: 'Avanzato', goal: 'FS 360', notes: '', skills: { 'Conduzione Base': 2, 'Carving': 1, 'Switch': 1, 'Box/Rail': 0, '180': 1, '360': 1, 'Grab': 2 } }
+            ],
+            lessons: [],
+            deadlines: [
+                { id: 'd1', title: 'Fattura Mensile Scuola', category: 'fiscale', date: '2027-01-31', done: false }
+            ]
+        };
+        let isCloudLoaded = false;
 
-let appState = {
-    settings: { rateScuolaInd: 40, rateScuolaCol: 42, rateClubHourly: 35, seasonGoal: 12000, taxReservePct: 15, lastWaxDate: '2026-12-01' },
-    clients: [],
-    lessons: [],
-    deadlines: []
-};
-let isCloudLoaded = false;
+        // Connessione iniziale e sincronizzazione in tempo reale blindata
+        dbRef.once('value').then((snapshot) => {
+            const data = snapshot.val();
+            if (data && data.lessons) {
+                appState = data;
+            } else {
+                // Se il database è vuoto o non ha lezioni, inizializzalo
+                dbRef.set(appState);
+            }
+            isCloudLoaded = true;
+            refreshAllViews();
 
-// Ascolta i dati in tempo reale da Firebase
-dbRef.on('value', (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-        appState = data;
-    } else {
-        // Se il database è completamente vuoto, carica i dati di default e salvali sul cloud
-        dbRef.set(appState);
-    }
-    isCloudLoaded = true;
-    refreshAllViews();
-});
-
-function saveState() {
-    if (isCloudLoaded) {
-        dbRef.set(appState);
-    }
-    refreshAllViews();
-}
-        firebase.initializeApp(firebaseConfig);
-        const dbRef = firebase.database().ref('shredlog_data');
-
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
-                    },
-                    colors: {
-                        alpine: {
-                            950: '#070b14',
-                            900: '#0f172a',
-                            800: '#1e293b',
-                            700: '#334155',
-                        },
-                        scuola: {
-                            light: '#f87171',
-                            DEFAULT: '#ef4444',
-                            dark: '#dc2626'
-                        },
-                        club: {
-                            light: '#4ade80',
-                            DEFAULT: '#22c55e',
-                            dark: '#16a34a'
-                        }
+            // Ascolta i cambiamenti in tempo reale dagli altri dispositivi
+            dbRef.on('value', (snapshot) => {
+                const cloudData = snapshot.val();
+                if (cloudData && cloudData.lessons) {
+                    // Aggiorna solo se i dati del cloud sono diversi per evitare loop
+                    if (JSON.stringify(cloudData.lessons) !== JSON.stringify(appState.lessons)) {
+                        appState = cloudData;
+                        refreshAllViews();
                     }
                 }
+            });
+        });
+
+        function saveState() {
+            if (isCloudLoaded) {
+                dbRef.set(appState);
+            }
+            refreshAllViews();
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 2000);
+        }
+
+        function formatEuro(n) { return Number(n || 0).toLocaleString('it-IT') + ' €'; }
+
+        function formatDateIt(isoStr) {
+            if (!isoStr) return '--';
+            const parts = isoStr.split('-');
+            if (parts.length !== 3) return isoStr;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        function switchTab(tab) {
+            ['dashboard', 'lezioni', 'clienti', 'scadenze'].forEach(t => {
+                const sec = document.getElementById(`tab-${t}`);
+                if (sec) sec.classList.toggle('hidden', t !== tab);
+                
+                const deskNav = document.getElementById(`nav-${t}`);
+                if (deskNav) {
+                    deskNav.className = t === tab 
+                        ? "nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-sm" 
+                        : "nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60";
+                }
+            });
+            refreshAllViews();
+        }
+
+        function renderClientDropdownOptions(filterText = '') {
+            const listEl = document.getElementById('clientDropdownList');
+            if (!listEl) return;
+            const query = (filterText || '').toLowerCase().trim();
+            const filtered = appState.clients.filter(c => c.name.toLowerCase().includes(query));
+            let html = `<div onclick="selectClient('', '-- Nessun cliente specifico --')" class="px-3 py-2 hover:bg-slate-800 cursor-pointer text-slate-400 text-xs">-- Nessun cliente specifico --</div>`;
+            if (filtered.length > 0) {
+                html += filtered.map(c => `
+                    <div onclick="selectClient('${c.id}', '${c.name.replace(/'/g, "\\'")}')" class="px-3 py-2 hover:bg-blue-600/20 hover:text-blue-300 cursor-pointer text-slate-200 text-xs flex justify-between">
+                        <span>${c.name}</span><span class="text-[10px] text-slate-400 font-mono">${c.level || 'Base'}</span>
+                    </div>
+                `).join('');
+            }
+            listEl.innerHTML = html;
+        }
+
+        function toggleClientDropdown(show) {
+            const listEl = document.getElementById('clientDropdownList');
+            if (!listEl) return;
+            if (show) { renderClientDropdownOptions(document.getElementById('clientSearchInput').value); listEl.classList.remove('hidden'); }
+            else { setTimeout(() => listEl.classList.add('hidden'), 200); }
+        }
+
+        function onClientSearchInput() {
+            renderClientDropdownOptions(document.getElementById('clientSearchInput').value);
+            document.getElementById('clientDropdownList').classList.remove('hidden');
+            if (!document.getElementById('clientSearchInput').value.trim()) document.getElementById('lessonClient').value = '';
+        }
+
+        function selectClient(id, name) {
+            document.getElementById('lessonClient').value = id;
+            document.getElementById('clientSearchInput').value = id ? name : '';
+            document.getElementById('clientDropdownList').classList.add('hidden');
+        }
+
+        window.addEventListener('click', function(e) {
+            const wrap = document.getElementById('lessonClientWrapper');
+            if (wrap && !wrap.contains(e.target)) document.getElementById('clientDropdownList')?.classList.add('hidden');
+        });
+
+        function computeDefaultNet(entity, type, hours) {
+            const s = appState.settings;
+            const h = parseFloat(hours) || 1;
+            if (entity === 'scuola') return type === 'collettiva' ? h * s.rateScuolaCol : h * s.rateScuolaInd;
+            return 3 * s.rateClubHourly;
+        }
+
+        function recalculateFormNet() {
+            const entity = document.getElementById('lessonEntity').value;
+            const type = document.getElementById('lessonType').value;
+            const hours = entity === 'club' ? 3 : (parseFloat(document.getElementById('lessonHours').value) || 2);
+            document.getElementById('lessonNetAmount').value = computeDefaultNet(entity, type, hours);
+        }
+
+        function selectLessonEntity(entity) {
+            document.getElementById('lessonEntity').value = entity;
+            const typeWrap = document.getElementById('lessonTypeWrapper');
+            const typeSel = document.getElementById('lessonType');
+            const clientWrap = document.getElementById('lessonClientWrapper');
+            const slotScu = document.getElementById('slotContainerScuola');
+            const slotClu = document.getElementById('slotContainerClub');
+            const hInput = document.getElementById('lessonHours');
+            const btnScu = document.getElementById('btn-entity-scuola');
+            const btnClu = document.getElementById('btn-entity-club');
+
+            if (entity === 'scuola') {
+                btnScu.className = "py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-red-500/20 text-red-300 border-red-500/50 shadow-sm";
+                btnClu.className = "py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-slate-900 text-slate-400 border-slate-700";
+                typeWrap.classList.remove('hidden');
+                typeSel.innerHTML = `<option value="individuale">Individuale</option><option value="collettiva">Collettiva</option>`;
+                clientWrap.classList.remove('hidden');
+                slotScu.classList.remove('hidden');
+                slotClu.classList.add('hidden');
+                hInput.style.display = 'block';
+                hInput.value = 2;
+            } else {
+                btnClu.className = "py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm";
+                btnScu.className = "py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-slate-900 text-slate-400 border-slate-700";
+                typeWrap.classList.add('hidden');
+                typeSel.innerHTML = `<option value="club_gruppo">Gruppo Club</option>`;
+                typeSel.value = 'club_gruppo';
+                clientWrap.classList.add('hidden');
+                slotScu.classList.add('hidden');
+                slotClu.classList.remove('hidden');
+                hInput.style.display = 'none';
+                hInput.value = 3;
+            }
+            updateCalculatedSlot();
+            recalculateFormNet();
+        }
+
+        function updateCalculatedSlot() {
+            const start = document.getElementById('lessonStartTime').value;
+            const hours = parseFloat(document.getElementById('lessonHours').value) || 2;
+            const endHour = Math.min(17, parseInt(start) + hours);
+            document.getElementById('calculatedSlotText').textContent = `${start} - ${String(endHour).padStart(2,'0')}:00`;
+        }
+
+        function onHoursOrStartChange() {
+            updateCalculatedSlot();
+            recalculateFormNet();
+        }
+
+        function saveLesson(e) {
+            e.preventDefault();
+            const id = document.getElementById('lessonId').value;
+            const entity = document.getElementById('lessonEntity').value;
+            const hoursVal = entity === 'club' ? 3 : (parseFloat(document.getElementById('lessonHours').value) || 2);
+            const lesson = {
+                id: id || 'l_' + Date.now(),
+                date: document.getElementById('lessonDate').value,
+                slot: entity === 'scuola' ? document.getElementById('calculatedSlotText').textContent : document.getElementById('lessonClubSlot').value,
+                entity: entity,
+                type: entity === 'club' ? 'club_gruppo' : document.getElementById('lessonType').value,
+                hours: hoursVal,
+                netAmount: computeDefaultNet(entity, document.getElementById('lessonType').value, hoursVal),
+                clientId: entity === 'scuola' ? document.getElementById('lessonClient').value : '',
+                notes: document.getElementById('lessonNotes').value.trim()
+            };
+
+            if (id) {
+                const idx = appState.lessons.findIndex(x => x.id === id);
+                if (idx > -1) appState.lessons[idx] = lesson;
+            } else {
+                appState.lessons.unshift(lesson);
+            }
+
+            resetLessonForm();
+            saveState();
+            showToast('Lezione salvata sul Cloud!');
+        }
+
+        function resetLessonForm() {
+            document.getElementById('lessonId').value = '';
+            document.getElementById('lessonDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('lessonHours').value = 2;
+            document.getElementById('lessonNotes').value = '';
+            document.getElementById('clientSearchInput').value = '';
+            document.getElementById('lessonClient').value = '';
+            selectLessonEntity('scuola');
+        }
+
+        function deleteLesson(id) {
+            appState.lessons = appState.lessons.filter(x => x.id !== id);
+            saveState();
+            showToast('Eliminata.');
+        }
+
+        function renderLessons() {
+            const container = document.getElementById('lessons-list-container');
+            const badgeCount = document.getElementById('badge-lezioni-count');
+            if (badgeCount) badgeCount.textContent = appState.lessons.length;
+            if (!container) return;
+
+            const fEntity = document.getElementById('filterEntity').value;
+            const fMonth = document.getElementById('filterMonth').value;
+            const fType = document.getElementById('filterType').value;
+
+            const filtered = appState.lessons.filter(l => {
+                if (fEntity !== 'all' && l.entity !== fEntity) return false;
+                if (fMonth !== 'all' && l.date.split('-')[1] !== fMonth) return false;
+                if (fType !== 'all' && l.type !== fType) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="glass-card rounded-xl p-6 text-center text-slate-400 text-xs">Nessuna lezione trovata.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(l => {
+                const client = appState.clients.find(c => c.id === l.clientId);
+                return `
+                    <div class="glass-card rounded-xl p-3.5 flex items-center justify-between text-xs gap-2">
+                        <div>
+                            <div class="flex items-center gap-2 font-bold text-white">
+                                <span>${formatDateIt(l.date)}</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] ${l.entity === 'scuola' ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'}">${l.entity}</span>
+                                <span class="text-emerald-400 font-mono">${formatEuro(l.netAmount)}</span>
+                            </div>
+                            <div class="text-slate-400 mt-0.5">${client ? client.name : 'Nessun cliente'} &bull; ${l.slot} (${l.hours}h) ${l.notes ? ' &bull; ' + l.notes : ''}</div>
+                        </div>
+                        <button onclick="deleteLesson('${l.id}')" class="text-rose-400 hover:text-rose-300 p-1">✕</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openClientDetailModal(clientId) {
+            currentDetailClientId = clientId;
+            const c = appState.clients.find(x => x.id === clientId);
+            if (!c) return;
+            document.getElementById('modal-detail-name').textContent = c.name;
+            document.getElementById('modal-detail-stance').textContent = c.stance || 'Regular';
+            document.getElementById('modal-detail-level').textContent = c.level || 'Base';
+            
+            const goalBox = document.getElementById('modal-detail-goal-box');
+            if (c.goal) { goalBox.classList.remove('hidden'); document.getElementById('modal-detail-goal').textContent = c.goal; }
+            else { goalBox.classList.add('hidden'); }
+
+            renderModalDetailSkills(c);
+            renderModalDetailLessons(c.id);
+            document.getElementById('client-detail-modal').classList.remove('hidden');
+        }
+
+        function closeClientDetailModal() { document.getElementById('client-detail-modal').classList.add('hidden'); currentDetailClientId = null; }
+
+        function renderModalDetailSkills(c) {
+            const container = document.getElementById('modal-detail-skills');
+            if (!container) return;
+            const skillList = ['Conduzione Base', 'Carving', 'Switch', 'Box/Rail', '180', '360', 'Grab'];
+            if (!c.skills) c.skills = {};
+            container.innerHTML = skillList.map(sk => {
+                const status = c.skills[sk] || 0;
+                let bgClass = 'bg-slate-800 text-slate-400 border-slate-700';
+                if (status === 1) bgClass = 'bg-blue-500/20 text-blue-300 border-blue-500/40 font-semibold';
+                if (status === 2) bgClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold';
+                return `<button type="button" onclick="cycleModalSkill('${c.id}', '${sk}')" class="skill-badge px-2.5 py-1 rounded-lg border text-[11px] ${bgClass}">${sk}</button>`;
+            }).join('');
+        }
+
+        function cycleModalSkill(clientId, skillName) {
+            const c = appState.clients.find(x => x.id === clientId);
+            if (!c) return;
+            if (!c.skills) c.skills = {};
+            c.skills[skillName] = ((c.skills[skillName] || 0) + 1) % 3;
+            saveState();
+            renderModalDetailSkills(c);
+        }
+
+        function renderModalDetailLessons(clientId) {
+            const container = document.getElementById('modal-detail-lessons');
+            if (!container) return;
+            const cLessons = appState.lessons.filter(l => l.clientId === clientId);
+            if (cLessons.length === 0) { container.innerHTML = `<div class="p-3 bg-slate-900/50 rounded-xl text-slate-400 text-xs text-center">Nessuna lezione.</div>`; return; }
+            container.innerHTML = cLessons.map(l => `
+                <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 flex justify-between text-xs">
+                    <div><span class="font-bold text-white">${formatDateIt(l.date)}</span> - <span class="text-blue-400 font-mono">${l.slot} (${l.hours}h)</span></div>
+                    <span class="font-mono text-emerald-400">${formatEuro(l.netAmount)}</span>
+                </div>
+            `).join('');
+        }
+
+        function openClientModal(id = null) {
+            document.getElementById('client-modal').classList.remove('hidden');
+            if (id) {
+                const c = appState.clients.find(x => x.id === id);
+                if (!c) return;
+                document.getElementById('client-modal-title').textContent = 'Modifica Cliente';
+                document.getElementById('clientId').value = c.id;
+                document.getElementById('clientName').value = c.name;
+                document.getElementById('clientStance').value = c.stance || 'Regular';
+                document.getElementById('clientLevel').value = c.level || 'Base';
+                document.getElementById('clientGoal').value = c.goal || '';
+                document.getElementById('clientNotes').value = c.notes || '';
+            } else {
+                document.getElementById('client-modal-title').textContent = 'Nuovo Cliente';
+                document.getElementById('client-form').reset();
+                document.getElementById('clientId').value = '';
             }
         }
+
+        function closeClientModal() { document.getElementById('client-modal').classList.add('hidden'); }
+
+        function saveClient(e) {
+            e.preventDefault();
+            const id = document.getElementById('clientId').value;
+            const client = {
+                id: id || 'c_' + Date.now(),
+                name: document.getElementById('clientName').value.trim(),
+                stance: document.getElementById('clientStance').value,
+                level: document.getElementById('clientLevel').value,
+                goal: document.getElementById('clientGoal').value.trim(),
+                notes: document.getElementById('clientNotes').value.trim(),
+                skills: {}
+            };
+            const existing = appState.clients.find(x => x.id === client.id);
+            client.skills = (existing && existing.skills) ? existing.skills : { 'Conduzione Base': 0, 'Carving': 0, 'Switch': 0, 'Box/Rail': 0, '180': 0, '360': 0, 'Grab': 0 };
+
+            if (id) {
+                const idx = appState.clients.findIndex(x => x.id === id);
+                if (idx > -1) appState.clients[idx] = client;
+            } else {
+                appState.clients.push(client);
+            }
+            closeClientModal();
+            saveState();
+            showToast('Cliente salvato!');
+        }
+
+        function deleteClient(id) {
+            appState.clients = appState.clients.filter(x => x.id !== id);
+            saveState();
+        }
+
+        function renderClients() {
+            const grid = document.getElementById('clients-grid');
+            const badgeCount = document.getElementById('badge-clienti-count');
+            if (badgeCount) badgeCount.textContent = appState.clients.length;
+            if (!grid) return;
+            if (appState.clients.length === 0) { grid.innerHTML = `<div class="glass-card rounded-2xl p-6 text-center text-slate-400 text-xs col-span-3">Nessun cliente.</div>`; return; }
+            grid.innerHTML = appState.clients.map(c => `
+                <div onclick="openClientDetailModal('${c.id}')" class="glass-card rounded-2xl p-4 space-y-2.5 cursor-pointer hover:border-blue-500/40 transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-white text-base">${c.name}</h3>
+                            <p class="text-xs text-slate-400">Stance: <strong>${c.stance || 'Regular'}</strong> &bull; Livello: <strong class="text-blue-400">${c.level || 'Base'}</strong></p>
+                        </div>
+                        <button onclick="event.stopPropagation(); deleteClient('${c.id}')" class="text-rose-400 text-xs">✕</button>
+                    </div>
+                    ${c.goal ? `<p class="text-[11px] text-blue-300 bg-blue-500/10 p-1.5 rounded-lg truncate">🎯 <strong>${c.goal}</strong></p>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function openDeadlineModal() { document.getElementById('deadline-modal').classList.remove('hidden'); }
+        function closeDeadlineModal() { document.getElementById('deadline-modal').classList.add('hidden'); }
+
+        function saveDeadline(e) {
+            e.preventDefault();
+            appState.deadlines.push({
+                id: 'dl_' + Date.now(),
+                title: document.getElementById('dlTitle').value.trim(),
+                date: document.getElementById('dlDate').value,
+                category: document.getElementById('dlCategory').value,
+                done: false
+            });
+            closeDeadlineModal();
+            saveState();
+        }
+
+        function toggleDeadlineDone(id) {
+            const d = appState.deadlines.find(x => x.id === id);
+            if (d) { d.done = !d.done; saveState(); }
+        }
+
+        function deleteDeadline(id) {
+            appState.deadlines = appState.deadlines.filter(x => x.id !== id);
+            saveState();
+        }
+
+        function toggleCompletedDeadlines() {
+            showCompletedDeadlinesState = !showCompletedDeadlinesState;
+            document.getElementById('btn-toggle-completed').textContent = showCompletedDeadlinesState ? 'Nascondi Completate' : 'Mostra Completate';
+            renderDeadlines();
+        }
+
+        function renderDeadlines() {
+            const container = document.getElementById('deadlines-list');
+            const alertDot = document.getElementById('badge-scadenze-alert');
+            if (!container) return;
+            const pending = appState.deadlines.filter(d => !d.done);
+            if (alertDot) alertDot.classList.toggle('hidden', pending.length === 0);
+            const displayList = appState.deadlines.filter(d => showCompletedDeadlinesState || !d.done);
+            if (displayList.length === 0) { container.innerHTML = `<div class="p-4 bg-slate-900/50 text-slate-400 text-xs text-center">Nessuna scadenza.</div>`; return; }
+            container.innerHTML = displayList.map(d => `
+                <div class="p-3.5 rounded-xl border flex justify-between items-center text-xs ${d.done ? 'bg-slate-900/40 opacity-60' : 'glass-card'}">
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleDeadlineDone('${d.id}')" class="w-6 h-6 rounded-lg border flex items-center justify-center ${d.done ? 'bg-emerald-500 text-slate-950 font-bold' : 'border-slate-600'}">✓</button>
+                        <div>
+                            <h4 class="font-bold ${d.done ? 'line-through text-slate-400' : 'text-white'}">${d.title}</h4>
+                            <p class="text-[11px] text-slate-400">${d.category} &bull; ${formatDateIt(d.date)}</p>
+                        </div>
+                    </div>
+                    <button onclick="deleteDeadline('${d.id}')" class="text-rose-400">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+            document.getElementById('setSeasonGoal').value = appState.settings.seasonGoal || 12000;
+            document.getElementById('setRateScuolaInd').value = appState.settings.rateScuolaInd;
+            document.getElementById('setRateScuolaCol').value = appState.settings.rateScuolaCol;
+            document.getElementById('setRateClubHourly').value = appState.settings.rateClubHourly;
+            document.getElementById('setTaxReserve').value = appState.settings.taxReservePct;
+        }
+
+        function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
+
+        function saveSettings() {
+            appState.settings.seasonGoal = parseFloat(document.getElementById('setSeasonGoal').value) || 12000;
+            appState.settings.rateScuolaInd = parseFloat(document.getElementById('setRateScuolaInd').value) || 40;
+            appState.settings.rateScuolaCol = parseFloat(document.getElementById('setRateScuolaCol').value) || 42;
+            appState.settings.rateClubHourly = parseFloat(document.getElementById('setRateClubHourly').value) || 35;
+            appState.settings.taxReservePct = parseFloat(document.getElementById('setTaxReserve').value) || 15;
+            appState.lessons.forEach(l => { l.netAmount = computeDefaultNet(l.entity, l.type, l.hours); });
+            closeSettingsModal();
+            saveState();
+        }
+
+        function resetWaxCounter() {
+            appState.settings.lastWaxDate = new Date().toISOString().split('T')[0];
+            saveState();
+            showToast('Manutenzione registrata!');
+        }
+
+        function updateDashboardAndKPIs() {
+            const s = appState.settings;
+            let totalNet = 0, hoursScuola = 0, hoursClub = 0, euroScuola = 0, euroClub = 0;
+            let daysSet = new Set();
+
+            appState.lessons.forEach(l => {
+                totalNet += l.netAmount;
+                daysSet.add(l.date);
+                if (l.entity === 'scuola') { hoursScuola += l.hours; euroScuola += l.netAmount; }
+                else { hoursClub += l.hours; euroClub += l.netAmount; }
+            });
+
+            const totalHours = hoursScuola + hoursClub;
+            const avgHourly = totalHours > 0 ? totalNet / totalHours : 0;
+
+            document.getElementById('headerRateScuola').textContent = s.rateScuolaInd + '€/h';
+            document.getElementById('headerRateClub').textContent = s.rateClubHourly + '€/h';
+            document.getElementById('kpi-total-net').textContent = formatEuro(totalNet);
+            document.getElementById('kpi-paid-net').textContent = formatEuro(totalNet);
+            document.getElementById('kpi-tax-net').textContent = formatEuro(totalNet * (s.taxReservePct / 100));
+            document.getElementById('kpi-total-hours').textContent = totalHours.toFixed(1) + 'h';
+            document.getElementById('kpi-days-count').textContent = `(${daysSet.size} giornate)`;
+            document.getElementById('kpi-hours-scuola').textContent = hoursScuola.toFixed(1) + 'h';
+            document.getElementById('kpi-hours-club').textContent = hoursClub.toFixed(1) + 'h';
+
+            const scuolaPct = totalHours > 0 ? (hoursScuola / totalHours) * 100 : 50;
+            document.getElementById('bar-hours-scuola').style.width = scuolaPct + '%';
+            document.getElementById('bar-hours-club').style.width = (100 - scuolaPct) + '%';
+            document.getElementById('kpi-euro-scuola').textContent = formatEuro(euroScuola);
+            document.getElementById('kpi-euro-club').textContent = formatEuro(euroClub);
+            document.getElementById('kpi-avg-hourly').textContent = avgHourly.toFixed(2).replace('.', ',') + ' €/h';
+
+            const goal = s.seasonGoal || 12000;
+            const goalPct = Math.min(100, (totalNet / goal) * 100);
+            document.getElementById('kpi-goal-current').textContent = formatEuro(totalNet);
+            document.getElementById('kpi-goal-target').textContent = formatEuro(goal);
+            document.getElementById('kpi-goal-pct').textContent = goalPct.toFixed(0) + '%';
+            document.getElementById('bar-season-goal').style.width = goalPct + '%';
+
+            let hoursSinceWax = 0;
+            const lastWaxTime = new Date(s.lastWaxDate || '2026-12-01').getTime();
+            appState.lessons.forEach(l => { if (new Date(l.date).getTime() >= lastWaxTime) hoursSinceWax += l.hours; });
+            document.getElementById('wax-hours-since').textContent = hoursSinceWax.toFixed(1) + 'h';
+            document.getElementById('wax-last-date').textContent = formatDateIt(s.lastWaxDate || '2026-12-01');
+            const waxBar = document.getElementById('wax-progress-bar');
+            if (waxBar) {
+                waxBar.style.width = Math.min(100, (hoursSinceWax / 25) * 100) + '%';
+                waxBar.className = hoursSinceWax >= 25 ? 'bg-rose-500 h-full' : 'bg-emerald-500 h-full';
+            }
+
+            renderMonthlyChart();
+            renderTypeBreakdown(hoursScuola, hoursClub, euroScuola, euroClub);
+        }
+
+        function renderMonthlyChart() {
+            const chart = document.getElementById('monthly-chart');
+            if (!chart) return;
+            const months = [{ num: '12', name: 'Dic' }, { num: '01', name: 'Gen' }, { num: '02', name: 'Feb' }, { num: '03', name: 'Mar' }, { num: '04', name: 'Apr' }];
+            let totals = {};
+            months.forEach(m => totals[m.num] = 0);
+            appState.lessons.forEach(l => {
+                const m = l.date.split('-')[1];
+                if (totals[m] !== undefined) totals[m] += l.netAmount;
+            });
+            const maxVal = Math.max(100, ...Object.values(totals));
+            chart.innerHTML = months.map(m => {
+                const val = totals[m.num];
+                const heightPct = Math.max(8, (val / maxVal) * 100);
+                return `
+                    <div class="flex flex-col items-center gap-1.5 h-full justify-end">
+                        <span class="text-[10px] font-mono text-slate-300">${val > 0 ? val + '€' : ''}</span>
+                        <div class="w-full bg-gradient-to-t from-blue-600 to-indigo-400 rounded-t-lg transition-all" style="height: ${heightPct}%"></div>
+                        <span class="text-xs font-semibold text-slate-400 mt-1">${m.name}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderTypeBreakdown(scuolaH, clubH, scuolaE, clubE) {
+            const container = document.getElementById('lesson-type-breakdown');
+            if (!container) return;
+            container.innerHTML = `
+                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center">
+                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-red-500"></span><div><p class="font-bold text-white text-xs">Scuola</p><p class="text-[11px] text-slate-400">${scuolaH.toFixed(1)}h</p></div></div>
+                    <span class="font-mono font-bold text-red-400 text-sm">${formatEuro(scuolaE)}</span>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center">
+                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><div><p class="font-bold text-white text-xs">Club</p><p class="text-[11px] text-slate-400">${clubH.toFixed(1)}h</p></div></div>
+                    <span class="font-mono font-bold text-emerald-400 text-sm">${formatEuro(clubE)}</span>
+                </div>
+            `;
+        }
+
+        function refreshAllViews() {
+            renderClientDropdownOptions();
+            renderLessons();
+            renderClients();
+            renderDeadlines();
+            updateDashboardAndKPIs();
+            if (currentDetailClientId) {
+                const c = appState.clients.find(x => x.id === currentDetailClientId);
+                if (c) { renderModalDetailSkills(c); renderModalDetailLessons(c.id); }
+            }
+        }
+
+        function exportCSV() {
+            let csv = "Data,Ente,Tipologia,Ore,CompensoNetto,Cliente,Note\n";
+            appState.lessons.forEach(l => {
+                const client = appState.clients.find(c => c.id === l.clientId);
+                csv += `"${formatDateIt(l.date)}","${l.entity}","${l.type}",${l.hours},${l.netAmount},"${client ? client.name : ''}","${l.notes || ''}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'shredlog_stagione.csv';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            showToast('CSV esportato!');
+        }
+
+        window.onload = function() {
+            const dateEl = document.getElementById('lessonDate');
+            if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+            selectLessonEntity('scuola');
+        };
     </script>
     <style>
         body {
