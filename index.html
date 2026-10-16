@@ -26,6 +26,7 @@
             appId: "1:68852713386:web:f0347df2c5c77702a70dd3",
             measurementId: "G-2T9S1Y2GCJ"
         };
+        
         firebase.initializeApp(firebaseConfig);
         const dbRef = firebase.database().ref('shredlog_data');
 
@@ -45,13 +46,13 @@
         let currentDetailClientId = null;
         let isSyncing = false;
 
-        // --- CARICAMENTO INIZIALE E SYNC STABILE ---
+// --- CARICAMENTO INIZIALE E SYNC STABILE ---
         dbRef.once('value').then((snapshot) => {
             const data = snapshot.val();
             if (data) {
                 appState = data;
             } else {
-                dbRef.set(appState);
+                dbRef.set(appState).catch(err => console.error("Errore scrittura iniziale:", err));
             }
             refreshAllViews();
 
@@ -64,6 +65,23 @@
                     refreshAllViews();
                 }
             });
+        }).catch((err) => {
+            console.error("Errore connessione Firebase:", err);
+            showToast("Errore di connessione al Cloud!");
+            refreshAllViews();
+        });
+
+        function saveState() {
+            isSyncing = true;
+            dbRef.set(appState).then(() => {
+                setTimeout(() => { isSyncing = false; }, 500);
+            }).catch((err) => {
+                isSyncing = false;
+                console.error("Errore salvataggio Firebase:", err);
+                showToast("Errore di salvataggio sul Cloud!");
+            });
+            refreshAllViews();
+        }
         }).catch((err) => {
             console.error("Errore Firebase:", err);
             refreshAllViews();
@@ -357,7 +375,11 @@
             renderModalDetailLessons(c.id);
             document.getElementById('client-detail-modal').classList.remove('hidden');
         }
+function openDeadlineModal() { 
+            document.getElementById('deadline-modal').classList.remove('hidden'); 
+        }
 
+        function closeDeadlineModal() { document.getElementById('deadline-modal').classList.add('hidden'); }
         function closeClientDetailModal() { document.getElementById('client-detail-modal').classList.add('hidden'); currentDetailClientId = null; }
 
         function renderModalDetailSkills(c) {
