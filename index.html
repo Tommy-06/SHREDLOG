@@ -9,654 +9,36 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-    
-    <!-- Firebase SDKs (CDN) -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-
     <script>
-        // Configurazione e connessione a Firebase Cloud
-        const firebaseConfig = {
-            apiKey: "AIzaSyC02BYD_TjOUEa3qDeJlh9c5sPzBhv42Ic",
-            authDomain: "shredlog-sync.firebaseapp.com",
-            databaseURL: "https://shredlog-sync-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "shredlog-sync",
-            storageBucket: "shredlog-sync.firebasestorage.app",
-            messagingSenderId: "68852713386",
-            appId: "1:68852713386:web:f0347df2c5c77702a70dd3",
-            measurementId: "G-2T9S1Y2GCJ"
-        };
-        
-        firebase.initializeApp(firebaseConfig);
-        const dbRef = firebase.database().ref('shredlog_data');
-
-        function getDefaultState() {
-            return {
-                settings: { rateScuolaInd: 40, rateScuolaCol: 42, rateClubHourly: 35, seasonGoal: 12000, taxReservePct: 15, lastWaxDate: '2026-12-01' },
-                clients: [], 
-                lessons: [],
-                deadlines: [
-                    { id: 'd1', title: 'Fattura Mensile Scuola', category: 'fiscale', date: '2027-01-31', done: false }
-                ]
-            };
-        }
-
-        let appState = getDefaultState();
-        let showCompletedDeadlinesState = false;
-        let currentDetailClientId = null;
-        let isSyncing = false;
-
-// --- CARICAMENTO INIZIALE E SYNC STABILE ---
-        dbRef.once('value').then((snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                appState = data;
-            } else {
-                dbRef.set(appState).catch(err => console.error("Errore scrittura iniziale:", err));
-            }
-            refreshAllViews();
-
-            // Ascolta modifiche remote senza interferire con i salvataggi locali
-            dbRef.on('value', (snap) => {
-                if (isSyncing) return;
-                const cloudData = snap.val();
-                if (cloudData && JSON.stringify(cloudData) !== JSON.stringify(appState)) {
-                    appState = cloudData;
-                    refreshAllViews();
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        alpine: {
+                            950: '#070b14',
+                            900: '#0f172a',
+                            800: '#1e293b',
+                            700: '#334155',
+                        },
+                        scuola: {
+                            light: '#f87171',
+                            DEFAULT: '#ef4444',
+                            dark: '#dc2626'
+                        },
+                        club: {
+                            light: '#4ade80',
+                            DEFAULT: '#22c55e',
+                            dark: '#16a34a'
+                        }
+                    }
                 }
-            });
-        }).catch((err) => {
-            console.error("Errore connessione Firebase:", err);
-            showToast("Errore di connessione al Cloud!");
-            refreshAllViews();
-        });
-
-        function saveState() {
-            isSyncing = true;
-            dbRef.set(appState).then(() => {
-                setTimeout(() => { isSyncing = false; }, 500);
-            }).catch((err) => {
-                isSyncing = false;
-                console.error("Errore salvataggio Firebase:", err);
-                showToast("Errore di salvataggio sul Cloud!");
-            });
-            refreshAllViews();
-        }
-        }).catch((err) => {
-            console.error("Errore Firebase:", err);
-            refreshAllViews();
-        });
-
-        function saveState() {
-            isSyncing = true;
-            dbRef.set(appState).then(() => {
-                setTimeout(() => { isSyncing = false; }, 500);
-            }).catch((err) => {
-                isSyncing = false;
-                console.error("Errore salvataggio:", err);
-            });
-            refreshAllViews();
-        }
-
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            if(!t) return;
-            document.getElementById('toast-msg').textContent = msg;
-            t.classList.remove('hidden');
-            setTimeout(() => t.classList.add('hidden'), 2000);
-        }
-
-        function formatEuro(n) { return Number(n || 0).toLocaleString('it-IT') + ' €'; }
-
-        function formatDateIt(isoStr) {
-            if (!isoStr) return '--';
-            const parts = isoStr.split('-');
-            if (parts.length !== 3) return isoStr;
-            return `${parts[2]}/${parts[1]}/${parts[0]}`;
-        }
-
-        function switchTab(tab) {
-            ['dashboard', 'lezioni', 'clienti', 'scadenze'].forEach(t => {
-                const sec = document.getElementById(`tab-${t}`);
-                if (sec) sec.classList.toggle('hidden', t !== tab);
-                
-                const deskNav = document.getElementById(`nav-${t}`);
-                if (deskNav) {
-                    deskNav.className = t === tab 
-                        ? "nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-sm" 
-                        : "nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60";
-                }
-            });
-            refreshAllViews();
-        }
-
-        function renderClientDropdownOptions(filterText = '') {
-            const listEl = document.getElementById('clientDropdownList');
-            if (!listEl) return;
-            const query = (filterText || '').toLowerCase().trim();
-            const filtered = appState.clients.filter(c => c.name.toLowerCase().includes(query));
-            let html = `<div onclick="selectClient('', '-- Nessun cliente specifico --')" class="px-3 py-2 hover:bg-slate-800 cursor-pointer text-slate-400 text-xs">-- Nessun cliente specifico --</div>`;
-            if (filtered.length > 0) {
-                html += filtered.map(c => `
-                    <div onclick="selectClient('${c.id}', '${c.name.replace(/'/g, "\\'")}')" class="px-3 py-2 hover:bg-blue-600/20 hover:text-blue-300 cursor-pointer text-slate-200 text-xs flex justify-between">
-                        <span>${c.name}</span><span class="text-[10px] text-slate-400 font-mono">${c.level || 'Base'}</span>
-                    </div>
-                `).join('');
-            }
-            listEl.innerHTML = html;
-        }
-
-        function toggleClientDropdown(show) {
-            const listEl = document.getElementById('clientDropdownList');
-            if (!listEl) return;
-            if (show) { renderClientDropdownOptions(document.getElementById('clientSearchInput').value); listEl.classList.remove('hidden'); }
-            else { setTimeout(() => listEl.classList.add('hidden'), 200); }
-        }
-
-        function onClientSearchInput() {
-            renderClientDropdownOptions(document.getElementById('clientSearchInput').value);
-            document.getElementById('clientDropdownList').classList.remove('hidden');
-            if (!document.getElementById('clientSearchInput').value.trim()) document.getElementById('lessonClient').value = '';
-        }
-
-        function selectClient(id, name) {
-            document.getElementById('lessonClient').value = id;
-            document.getElementById('clientSearchInput').value = id ? name : '';
-            document.getElementById('clientDropdownList').classList.add('hidden');
-        }
-
-        window.addEventListener('click', function(e) {
-            const wrap = document.getElementById('lessonClientWrapper');
-            if (wrap && !wrap.contains(e.target)) document.getElementById('clientDropdownList')?.classList.add('hidden');
-        });
-
-        function computeDefaultNet(entity, type, hours) {
-            const s = appState.settings;
-            const h = parseFloat(hours) || 1;
-            if (entity === 'scuola') return type === 'collettiva' ? h * s.rateScuolaCol : h * s.rateScuolaInd;
-            return 3 * s.rateClubHourly;
-        }
-
-        function recalculateFormNet() {
-            const entity = document.getElementById('lessonEntity').value;
-            const type = document.getElementById('lessonType').value;
-            const hours = entity === 'club' ? 3 : (parseFloat(document.getElementById('lessonHours').value) || 2);
-            document.getElementById('lessonNetAmount').value = computeDefaultNet(entity, type, hours);
-        }
-
-        function selectLessonEntity(entity) {
-            document.getElementById('lessonEntity').value = entity;
-            const typeWrap = document.getElementById('lessonTypeWrapper');
-            const typeSel = document.getElementById('lessonType');
-            const clientWrap = document.getElementById('lessonClientWrapper');
-            const slotScu = document.getElementById('slotContainerScuola');
-            const slotClu = document.getElementById('slotContainerClub');
-            const hInput = document.getElementById('lessonHours');
-            const btnScu = document.getElementById('btn-entity-scuola');
-            const btnClu = document.getElementById('btn-entity-club');
-
-            if (entity === 'scuola') {
-                btnScu.className = "py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-red-500/20 text-red-300 border-red-500/50 shadow-sm";
-                btnClu.className = "py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-slate-900 text-slate-400 border-slate-700";
-                typeWrap.classList.remove('hidden');
-                typeSel.innerHTML = `<option value="individuale">Individuale</option><option value="collettiva">Collettiva</option>`;
-                clientWrap.classList.remove('hidden');
-                slotScu.classList.remove('hidden');
-                slotClu.classList.add('hidden');
-                hInput.style.display = 'block';
-                hInput.value = 2;
-            } else {
-                btnClu.className = "py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm";
-                btnScu.className = "py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-slate-900 text-slate-400 border-slate-700";
-                typeWrap.classList.add('hidden');
-                typeSel.innerHTML = `<option value="club_gruppo">Gruppo Club</option>`;
-                typeSel.value = 'club_gruppo';
-                clientWrap.classList.add('hidden');
-                slotScu.classList.add('hidden');
-                slotClu.classList.remove('hidden');
-                hInput.style.display = 'none';
-                hInput.value = 3;
-            }
-            updateCalculatedSlot();
-            recalculateFormNet();
-        }
-
-        function updateCalculatedSlot() {
-            const start = document.getElementById('lessonStartTime').value;
-            const hours = parseFloat(document.getElementById('lessonHours').value) || 2;
-            const endHour = Math.min(17, parseInt(start) + hours);
-            document.getElementById('calculatedSlotText').textContent = `${start} - ${String(endHour).padStart(2,'0')}:00`;
-        }
-
-        function onHoursOrStartChange() {
-            updateCalculatedSlot();
-            recalculateFormNet();
-        }
-
-        function saveLesson(e) {
-            e.preventDefault();
-            const id = document.getElementById('lessonId').value;
-            const entity = document.getElementById('lessonEntity').value;
-            const hoursVal = entity === 'club' ? 3 : (parseFloat(document.getElementById('lessonHours').value) || 2);
-            
-            const lesson = {
-                id: id || 'l_' + Date.now(),
-                date: document.getElementById('lessonDate').value,
-                slot: entity === 'scuola' ? document.getElementById('calculatedSlotText').textContent : document.getElementById('lessonClubSlot').value,
-                entity: entity,
-                type: entity === 'club' ? 'club_gruppo' : document.getElementById('lessonType').value,
-                hours: hoursVal,
-                netAmount: computeDefaultNet(entity, document.getElementById('lessonType').value, hoursVal),
-                clientId: entity === 'scuola' ? document.getElementById('lessonClient').value : '',
-                notes: document.getElementById('lessonNotes').value.trim()
-            };
-
-            if (id) {
-                const idx = appState.lessons.findIndex(x => x.id === id);
-                if (idx > -1) appState.lessons[idx] = lesson;
-            } else {
-                appState.lessons.unshift(lesson);
-            }
-
-            resetLessonForm();
-            saveState();
-            showToast('Lezione salvata sul Cloud!');
-        }
-
-        function saveClient(e) {
-            e.preventDefault();
-            const id = document.getElementById('clientId').value;
-            const client = {
-                id: id || 'c_' + Date.now(),
-                name: document.getElementById('clientName').value.trim(),
-                stance: document.getElementById('clientStance').value,
-                level: document.getElementById('clientLevel').value,
-                goal: document.getElementById('clientGoal').value.trim(),
-                notes: document.getElementById('clientNotes').value.trim(),
-                skills: {}
-            };
-            const existing = appState.clients.find(x => x.id === client.id);
-            client.skills = (existing && existing.skills) ? existing.skills : { 'Conduzione Base': 0, 'Carving': 0, 'Switch': 0, 'Box/Rail': 0, '180': 0, '360': 0, 'Grab': 0 };
-
-            if (id) {
-                const idx = appState.clients.findIndex(x => x.id === id);
-                if (idx > -1) appState.clients[idx] = client;
-            } else {
-                appState.clients.push(client);
-            }
-            closeClientModal();
-            saveState();
-            showToast('Cliente salvato!');
-        }
-
-        function saveDeadline(e) {
-            e.preventDefault();
-            appState.deadlines.push({
-                id: 'dl_' + Date.now(),
-                title: document.getElementById('dlTitle').value.trim(),
-                date: document.getElementById('dlDate').value,
-                category: document.getElementById('dlCategory').value,
-                done: false
-            });
-            closeDeadlineModal();
-            saveState();
-            showToast('Scadenza salvata!');
-        }
-
-        function resetLessonForm() {
-            document.getElementById('lessonId').value = '';
-            document.getElementById('lessonDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('lessonHours').value = 2;
-            document.getElementById('lessonNotes').value = '';
-            document.getElementById('clientSearchInput').value = '';
-            document.getElementById('lessonClient').value = '';
-            selectLessonEntity('scuola');
-        }
-
-        function deleteLesson(id) {
-            appState.lessons = appState.lessons.filter(x => x.id !== id);
-            saveState();
-            showToast('Eliminata.');
-        }
-
-        function renderLessons() {
-            const container = document.getElementById('lessons-list-container');
-            const badgeCount = document.getElementById('badge-lezioni-count');
-            if (badgeCount) badgeCount.textContent = appState.lessons.length;
-            if (!container) return;
-
-            const fEntity = document.getElementById('filterEntity').value;
-            const fMonth = document.getElementById('filterMonth').value;
-            const fType = document.getElementById('filterType').value;
-
-            const filtered = appState.lessons.filter(l => {
-                if (fEntity !== 'all' && l.entity !== fEntity) return false;
-                if (fMonth !== 'all' && l.date.split('-')[1] !== fMonth) return false;
-                if (fType !== 'all' && l.type !== fType) return false;
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                container.innerHTML = `<div class="glass-card rounded-xl p-6 text-center text-slate-400 text-xs">Nessuna lezione trovata.</div>`;
-                return;
-            }
-
-            container.innerHTML = filtered.map(l => {
-                const client = appState.clients.find(c => c.id === l.clientId);
-                return `
-                    <div class="glass-card rounded-xl p-3.5 flex items-center justify-between text-xs gap-2">
-                        <div>
-                            <div class="flex items-center gap-2 font-bold text-white">
-                                <span>${formatDateIt(l.date)}</span>
-                                <span class="px-2 py-0.5 rounded text-[10px] ${l.entity === 'scuola' ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'}">${l.entity}</span>
-                                <span class="text-emerald-400 font-mono">${formatEuro(l.netAmount)}</span>
-                            </div>
-                            <div class="text-slate-400 mt-0.5">${client ? client.name : 'Nessun cliente'} &bull; ${l.slot} (${l.hours}h) ${l.notes ? ' &bull; ' + l.notes : ''}</div>
-                        </div>
-                        <button onclick="deleteLesson('${l.id}')" class="text-rose-400 hover:text-rose-300 p-1">✕</button>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function openClientDetailModal(clientId) {
-            currentDetailClientId = clientId;
-            const c = appState.clients.find(x => x.id === clientId);
-            if (!c) return;
-            document.getElementById('modal-detail-name').textContent = c.name;
-            document.getElementById('modal-detail-stance').textContent = c.stance || 'Regular';
-            document.getElementById('modal-detail-level').textContent = c.level || 'Base';
-            
-            const goalBox = document.getElementById('modal-detail-goal-box');
-            if (c.goal) { goalBox.classList.remove('hidden'); document.getElementById('modal-detail-goal').textContent = c.goal; }
-            else { goalBox.classList.add('hidden'); }
-
-            renderModalDetailSkills(c);
-            renderModalDetailLessons(c.id);
-            document.getElementById('client-detail-modal').classList.remove('hidden');
-        }
-function openDeadlineModal() { 
-            document.getElementById('deadline-modal').classList.remove('hidden'); 
-        }
-
-        function closeDeadlineModal() { document.getElementById('deadline-modal').classList.add('hidden'); }
-        function closeClientDetailModal() { document.getElementById('client-detail-modal').classList.add('hidden'); currentDetailClientId = null; }
-
-        function renderModalDetailSkills(c) {
-            const container = document.getElementById('modal-detail-skills');
-            if (!container) return;
-            const skillList = ['Conduzione Base', 'Carving', 'Switch', 'Box/Rail', '180', '360', 'Grab'];
-            if (!c.skills) c.skills = {};
-            container.innerHTML = skillList.map(sk => {
-                const status = c.skills[sk] || 0;
-                let bgClass = 'bg-slate-800 text-slate-400 border-slate-700';
-                if (status === 1) bgClass = 'bg-blue-500/20 text-blue-300 border-blue-500/40 font-semibold';
-                if (status === 2) bgClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold';
-                return `<button type="button" onclick="cycleModalSkill('${c.id}', '${sk}')" class="skill-badge px-2.5 py-1 rounded-lg border text-[11px] ${bgClass}">${sk}</button>`;
-            }).join('');
-        }
-
-        function cycleModalSkill(clientId, skillName) {
-            const c = appState.clients.find(x => x.id === clientId);
-            if (!c) return;
-            if (!c.skills) c.skills = {};
-            c.skills[skillName] = ((c.skills[skillName] || 0) + 1) % 3;
-            saveState();
-            renderModalDetailSkills(c);
-        }
-
-        function renderModalDetailLessons(clientId) {
-            const container = document.getElementById('modal-detail-lessons');
-            if (!container) return;
-            const cLessons = appState.lessons.filter(l => l.clientId === clientId);
-            if (cLessons.length === 0) { container.innerHTML = `<div class="p-3 bg-slate-900/50 rounded-xl text-slate-400 text-xs text-center">Nessuna lezione.</div>`; return; }
-            container.innerHTML = cLessons.map(l => `
-                <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 flex justify-between text-xs">
-                    <div><span class="font-bold text-white">${formatDateIt(l.date)}</span> - <span class="text-blue-400 font-mono">${l.slot} (${l.hours}h)</span></div>
-                    <span class="font-mono text-emerald-400">${formatEuro(l.netAmount)}</span>
-                </div>
-            `).join('');
-        }
-
-        function openClientModal(id = null) {
-            document.getElementById('client-modal').classList.remove('hidden');
-            if (id) {
-                const c = appState.clients.find(x => x.id === id);
-                if (!c) return;
-                document.getElementById('client-modal-title').textContent = 'Modifica Cliente';
-                document.getElementById('clientId').value = c.id;
-                document.getElementById('clientName').value = c.name;
-                document.getElementById('clientStance').value = c.stance || 'Regular';
-                document.getElementById('clientLevel').value = c.level || 'Base';
-                document.getElementById('clientGoal').value = c.goal || '';
-                document.getElementById('clientNotes').value = c.notes || '';
-            } else {
-                document.getElementById('client-modal-title').textContent = 'Nuovo Cliente';
-                document.getElementById('client-form').reset();
-                document.getElementById('clientId').value = '';
             }
         }
-
-        function closeClientModal() { document.getElementById('client-modal').classList.add('hidden'); }
-
-        function deleteClient(id) {
-            appState.clients = appState.clients.filter(x => x.id !== id);
-            saveState();
-        }
-
-        function renderClients() {
-            const grid = document.getElementById('clients-grid');
-            const badgeCount = document.getElementById('badge-clienti-count');
-            if (badgeCount) badgeCount.textContent = appState.clients.length;
-            if (!grid) return;
-            if (appState.clients.length === 0) { grid.innerHTML = `<div class="glass-card rounded-2xl p-6 text-center text-slate-400 text-xs col-span-3">Nessun cliente.</div>`; return; }
-            grid.innerHTML = appState.clients.map(c => `
-                <div onclick="openClientDetailModal('${c.id}')" class="glass-card rounded-2xl p-4 space-y-2.5 cursor-pointer hover:border-blue-500/40 transition">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="font-bold text-white text-base">${c.name}</h3>
-                            <p class="text-xs text-slate-400">Stance: <strong>${c.stance || 'Regular'}</strong> &bull; Livello: <strong class="text-blue-400">${c.level || 'Base'}</strong></p>
-                        </div>
-                        <button onclick="event.stopPropagation(); deleteClient('${c.id}')" class="text-rose-400 text-xs">✕</button>
-                    </div>
-                    ${c.goal ? `<p class="text-[11px] text-blue-300 bg-blue-500/10 p-1.5 rounded-lg truncate">🎯 <strong>${c.goal}</strong></p>` : ''}
-                </div>
-            `).join('');
-        }
-
-        function openDeadlineModal() { document.getElementById('deadline-modal').classList.remove('hidden'); }
-        function closeDeadlineModal() { document.getElementById('deadline-modal').classList.add('hidden'); }
-
-        function toggleDeadlineDone(id) {
-            const d = appState.deadlines.find(x => x.id === id);
-            if (d) { d.done = !d.done; saveState(); }
-        }
-
-        function deleteDeadline(id) {
-            appState.deadlines = appState.deadlines.filter(x => x.id !== id);
-            saveState();
-        }
-
-        function toggleCompletedDeadlines() {
-            showCompletedDeadlinesState = !showCompletedDeadlinesState;
-            document.getElementById('btn-toggle-completed').textContent = showCompletedDeadlinesState ? 'Nascondi Completate' : 'Mostra Completate';
-            renderDeadlines();
-        }
-
-        function renderDeadlines() {
-            const container = document.getElementById('deadlines-list');
-            const alertDot = document.getElementById('badge-scadenze-alert');
-            if (!container) return;
-            const pending = appState.deadlines.filter(d => !d.done);
-            if (alertDot) alertDot.classList.toggle('hidden', pending.length === 0);
-            const displayList = appState.deadlines.filter(d => showCompletedDeadlinesState || !d.done);
-            if (displayList.length === 0) { container.innerHTML = `<div class="p-4 bg-slate-900/50 text-slate-400 text-xs text-center">Nessuna scadenza.</div>`; return; }
-            container.innerHTML = displayList.map(d => `
-                <div class="p-3.5 rounded-xl border flex justify-between items-center text-xs ${d.done ? 'bg-slate-900/40 opacity-60' : 'glass-card'}">
-                    <div class="flex items-center gap-3">
-                        <button onclick="toggleDeadlineDone('${d.id}')" class="w-6 h-6 rounded-lg border flex items-center justify-center ${d.done ? 'bg-emerald-500 text-slate-950 font-bold' : 'border-slate-600'}">✓</button>
-                        <div>
-                            <h4 class="font-bold ${d.done ? 'line-through text-slate-400' : 'text-white'}">${d.title}</h4>
-                            <p class="text-[11px] text-slate-400">${d.category} &bull; ${formatDateIt(d.date)}</p>
-                        </div>
-                    </div>
-                    <button onclick="deleteDeadline('${d.id}')" class="text-rose-400">✕</button>
-                </div>
-            `).join('');
-        }
-
-        function openSettingsModal() {
-            document.getElementById('settings-modal').classList.remove('hidden');
-            document.getElementById('setSeasonGoal').value = appState.settings.seasonGoal || 12000;
-            document.getElementById('setRateScuolaInd').value = appState.settings.rateScuolaInd;
-            document.getElementById('setRateScuolaCol').value = appState.settings.rateScuolaCol;
-            document.getElementById('setRateClubHourly').value = appState.settings.rateClubHourly;
-            document.getElementById('setTaxReserve').value = appState.settings.taxReservePct;
-        }
-
-        function closeSettingsModal() { document.getElementById('settings-modal').classList.add('hidden'); }
-
-        function saveSettings() {
-            appState.settings.seasonGoal = parseFloat(document.getElementById('setSeasonGoal').value) || 12000;
-            appState.settings.rateScuolaInd = parseFloat(document.getElementById('setRateScuolaInd').value) || 40;
-            appState.settings.rateScuolaCol = parseFloat(document.getElementById('setRateScuolaCol').value) || 42;
-            appState.settings.rateClubHourly = parseFloat(document.getElementById('setRateClubHourly').value) || 35;
-            appState.settings.taxReservePct = parseFloat(document.getElementById('setTaxReserve').value) || 15;
-            appState.lessons.forEach(l => { l.netAmount = computeDefaultNet(l.entity, l.type, l.hours); });
-            closeSettingsModal();
-            saveState();
-        }
-
-        function resetWaxCounter() {
-            appState.settings.lastWaxDate = new Date().toISOString().split('T')[0];
-            saveState();
-            showToast('Manutenzione registrata!');
-        }
-
-        function updateDashboardAndKPIs() {
-            const s = appState.settings;
-            let totalNet = 0, hoursScuola = 0, hoursClub = 0, euroScuola = 0, euroClub = 0;
-            let daysSet = new Set();
-
-            appState.lessons.forEach(l => {
-                totalNet += l.netAmount;
-                daysSet.add(l.date);
-                if (l.entity === 'scuola') { hoursScuola += l.hours; euroScuola += l.netAmount; }
-                else { hoursClub += l.hours; euroClub += l.netAmount; }
-            });
-
-            const totalHours = hoursScuola + hoursClub;
-            const avgHourly = totalHours > 0 ? totalNet / totalHours : 0;
-
-            document.getElementById('headerRateScuola').textContent = s.rateScuolaInd + '€/h';
-            document.getElementById('headerRateClub').textContent = s.rateClubHourly + '€/h';
-            document.getElementById('kpi-total-net').textContent = formatEuro(totalNet);
-            document.getElementById('kpi-paid-net').textContent = formatEuro(totalNet);
-            document.getElementById('kpi-tax-net').textContent = formatEuro(totalNet * (s.taxReservePct / 100));
-            document.getElementById('kpi-total-hours').textContent = totalHours.toFixed(1) + 'h';
-            document.getElementById('kpi-days-count').textContent = `(${daysSet.size} giornate)`;
-            document.getElementById('kpi-hours-scuola').textContent = hoursScuola.toFixed(1) + 'h';
-            document.getElementById('kpi-hours-club').textContent = hoursClub.toFixed(1) + 'h';
-
-            const scuolaPct = totalHours > 0 ? (hoursScuola / totalHours) * 100 : 50;
-            document.getElementById('bar-hours-scuola').style.width = scuolaPct + '%';
-            document.getElementById('bar-hours-club').style.width = (100 - scuolaPct) + '%';
-            document.getElementById('kpi-euro-scuola').textContent = formatEuro(euroScuola);
-            document.getElementById('kpi-euro-club').textContent = formatEuro(euroClub);
-            document.getElementById('kpi-avg-hourly').textContent = avgHourly.toFixed(2).replace('.', ',') + ' €/h';
-
-            const goal = s.seasonGoal || 12000;
-            const goalPct = Math.min(100, (totalNet / goal) * 100);
-            document.getElementById('kpi-goal-current').textContent = formatEuro(totalNet);
-            document.getElementById('kpi-goal-target').textContent = formatEuro(goal);
-            document.getElementById('kpi-goal-pct').textContent = goalPct.toFixed(0) + '%';
-            document.getElementById('bar-season-goal').style.width = goalPct + '%';
-
-            let hoursSinceWax = 0;
-            const lastWaxTime = new Date(s.lastWaxDate || '2026-12-01').getTime();
-            appState.lessons.forEach(l => { if (new Date(l.date).getTime() >= lastWaxTime) hoursSinceWax += l.hours; });
-            document.getElementById('wax-hours-since').textContent = hoursSinceWax.toFixed(1) + 'h';
-            document.getElementById('wax-last-date').textContent = formatDateIt(s.lastWaxDate || '2026-12-01');
-            const waxBar = document.getElementById('wax-progress-bar');
-            if (waxBar) {
-                waxBar.style.width = Math.min(100, (hoursSinceWax / 25) * 100) + '%';
-                waxBar.className = hoursSinceWax >= 25 ? 'bg-rose-500 h-full' : 'bg-emerald-500 h-full';
-            }
-
-            renderMonthlyChart();
-            renderTypeBreakdown(hoursScuola, hoursClub, euroScuola, euroClub);
-        }
-
-        function renderMonthlyChart() {
-            const chart = document.getElementById('monthly-chart');
-            if (!chart) return;
-            const months = [{ num: '12', name: 'Dic' }, { num: '01', name: 'Gen' }, { num: '02', name: 'Feb' }, { num: '03', name: 'Mar' }, { num: '04', name: 'Apr' }];
-            let totals = {};
-            months.forEach(m => totals[m.num] = 0);
-            appState.lessons.forEach(l => {
-                const m = l.date.split('-')[1];
-                if (totals[m] !== undefined) totals[m] += l.netAmount;
-            });
-            const maxVal = Math.max(100, ...Object.values(totals));
-            chart.innerHTML = months.map(m => {
-                const val = totals[m.num];
-                const heightPct = Math.max(8, (val / maxVal) * 100);
-                return `
-                    <div class="flex flex-col items-center gap-1.5 h-full justify-end">
-                        <span class="text-[10px] font-mono text-slate-300">${val > 0 ? val + '€' : ''}</span>
-                        <div class="w-full bg-gradient-to-t from-blue-600 to-indigo-400 rounded-t-lg transition-all" style="height: ${heightPct}%"></div>
-                        <span class="text-xs font-semibold text-slate-400 mt-1">${m.name}</span>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function renderTypeBreakdown(scuolaH, clubH, scuolaE, clubE) {
-            const container = document.getElementById('lesson-type-breakdown');
-            if (!container) return;
-            container.innerHTML = `
-                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center">
-                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-red-500"></span><div><p class="font-bold text-white text-xs">Scuola</p><p class="text-[11px] text-slate-400">${scuolaH.toFixed(1)}h</p></div></div>
-                    <span class="font-mono font-bold text-red-400 text-sm">${formatEuro(scuolaE)}</span>
-                </div>
-                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex justify-between items-center">
-                    <div class="flex items-center gap-2.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><div><p class="font-bold text-white text-xs">Club</p><p class="text-[11px] text-slate-400">${clubH.toFixed(1)}h</p></div></div>
-                    <span class="font-mono font-bold text-emerald-400 text-sm">${formatEuro(clubE)}</span>
-                </div>
-            `;
-        }
-
-        function refreshAllViews() {
-            renderClientDropdownOptions();
-            renderLessons();
-            renderClients();
-            renderDeadlines();
-            updateDashboardAndKPIs();
-            if (currentDetailClientId) {
-                const c = appState.clients.find(x => x.id === currentDetailClientId);
-                if (c) { renderModalDetailSkills(c); renderModalDetailLessons(c.id); }
-            }
-        }
-
-        function exportCSV() {
-            let csv = "Data,Ente,Tipologia,Ore,CompensoNetto,Cliente,Note\n";
-            appState.lessons.forEach(l => {
-                const client = appState.clients.find(c => c.id === l.clientId);
-                csv += `"${formatDateIt(l.date)}","${l.entity}","${l.type}",${l.hours},${l.netAmount},"${client ? client.name : ''}","${l.notes || ''}"\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = 'shredlog_stagione.csv';
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            showToast('CSV esportato!');
-        }
-
-        window.onload = function() {
-            const dateEl = document.getElementById('lessonDate');
-            if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
-            selectLessonEntity('scuola');
-        };
     </script>
     <style>
         body {
@@ -704,6 +86,7 @@ function openDeadlineModal() {
             <div class="flex items-center gap-3">
                 <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-600 to-emerald-500 p-0.5 shadow-lg shadow-blue-500/20 flex items-center justify-center">
                     <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                        <!-- Logo con montagne stilizzate -->
                         <svg class="w-6 h-6 text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M2 20l7-12 5 7 3-4 5 9H2z"></path>
                             <path d="M14 15l2-3 2 3"></path>
@@ -714,7 +97,7 @@ function openDeadlineModal() {
                     <div class="flex items-center gap-2">
                         <h1 class="font-extrabold text-lg sm:text-xl tracking-tight text-white">SHREDLOG <span class="text-blue-400 font-mono text-sm px-1.5 py-0.5 bg-blue-500/10 border border-blue-500/30 rounded">PRO</span></h1>
                         <span class="hidden sm:inline-flex items-center gap-1 text-xs font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Cloud Sync Attiva
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Stagione 2026/2027
                         </span>
                     </div>
                     <p class="text-xs text-slate-400">Scuola &bull; Club &bull; Gestione Ore & Clienti</p>
@@ -749,18 +132,45 @@ function openDeadlineModal() {
         </div>
 
         <nav class="max-w-7xl mx-auto mt-3 hidden md:flex items-center gap-2 border-t border-slate-800/80 pt-2.5">
-            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">Dashboard & Compensi</button>
-            <button onclick="switchTab('lezioni')" id="nav-lezioni" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">Registro Ore & Lezioni <span id="badge-lezioni-count" class="ml-1 text-xs font-mono px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded-md">0</span></button>
-            <button onclick="switchTab('clienti')" id="nav-clienti" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">Clienti & Livello Tecnico <span id="badge-clienti-count" class="ml-1 text-xs font-mono px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded-md">0</span></button>
-            <button onclick="switchTab('scadenze')" id="nav-scadenze" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">Scadenze, Fisco & Attrezzatura <span id="badge-scadenze-alert" class="hidden w-2 h-2 rounded-full bg-blue-500"></span></button>
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                Dashboard & Compensi
+            </button>
+            <button onclick="switchTab('lezioni')" id="nav-lezioni" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Registro Ore & Lezioni
+                <span id="badge-lezioni-count" class="ml-1 text-xs font-mono px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded-md">0</span>
+            </button>
+            <button onclick="switchTab('clienti')" id="nav-clienti" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                Clienti & Livello Tecnico
+                <span id="badge-clienti-count" class="ml-1 text-xs font-mono px-1.5 py-0.2 bg-slate-800 text-slate-300 rounded-md">0</span>
+            </button>
+            <button onclick="switchTab('scadenze')" id="nav-scadenze" class="nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                Scadenze, Fisco & Attrezzatura
+                <span id="badge-scadenze-alert" class="hidden w-2 h-2 rounded-full bg-blue-500"></span>
+            </button>
         </nav>
     </header>
 
     <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-card border-t border-slate-800 px-2 py-1.5 flex justify-around items-center">
-        <button onclick="switchTab('dashboard')" id="mob-nav-dashboard" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400"><span>Dashboard</span></button>
-        <button onclick="switchTab('lezioni')" id="mob-nav-lezioni" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400"><span>Ore & Log</span></button>
-        <button onclick="switchTab('clienti')" id="mob-nav-clienti" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400"><span>Rider</span></button>
-        <button onclick="switchTab('scadenze')" id="mob-nav-scadenze" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400"><span>Scadenze</span></button>
+        <button onclick="switchTab('dashboard')" id="mob-nav-dashboard" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400">
+            <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+            <span>Dashboard</span>
+        </button>
+        <button onclick="switchTab('lezioni')" id="mob-nav-lezioni" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400">
+            <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>Ore & Log</span>
+        </button>
+        <button onclick="switchTab('clienti')" id="mob-nav-clienti" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400">
+            <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span>Rider</span>
+        </button>
+        <button onclick="switchTab('scadenze')" id="mob-nav-scadenze" class="flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400">
+            <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            <span>Scadenze</span>
+        </button>
     </nav>
 
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -773,8 +183,12 @@ function openDeadlineModal() {
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
                     <div>
-                        <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">Tariffe & Simulatore Compensi Attivi</h2>
-                        <p class="text-xs text-slate-300 mt-0.5">Gestisci le ore a Pila tra Scuola e Club con calcolo dei compensi in tempo reale.</p>
+                        <h2 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                            Tariffe & Simulatore Compensi Attivi
+                        </h2>
+                        <p class="text-xs text-slate-300 mt-0.5">
+                            Gestisci le ore a Pila tra Scuola e Club con calcolo dei compensi in tempo reale.
+                        </p>
                     </div>
                 </div>
                 <button onclick="openSettingsModal()" class="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs sm:text-sm font-semibold text-blue-300 transition flex items-center justify-center gap-2">
@@ -789,6 +203,9 @@ function openDeadlineModal() {
                             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Compenso Netto Totale</p>
                             <h3 class="text-2xl sm:text-3xl font-extrabold font-mono text-white mt-1" id="kpi-total-net">0 €</h3>
                         </div>
+                        <span class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </span>
                     </div>
                     <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
                         <span class="text-slate-400">Incassato: <strong class="text-emerald-400 font-mono" id="kpi-paid-net">0 €</strong></span>
@@ -805,6 +222,9 @@ function openDeadlineModal() {
                                 <span class="text-xs text-slate-400" id="kpi-days-count">(0 giornate)</span>
                             </div>
                         </div>
+                        <span class="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </span>
                     </div>
                     <div class="mt-4">
                         <div class="flex justify-between text-xs mb-1">
@@ -835,6 +255,9 @@ function openDeadlineModal() {
                                 </div>
                             </div>
                         </div>
+                        <span class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                        </span>
                     </div>
                     <div class="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
                         <span>Media Oraria:</span>
@@ -873,6 +296,10 @@ function openDeadlineModal() {
                         </div>
                     </div>
                     <div id="monthly-chart" class="grid grid-cols-5 gap-2 sm:gap-4 items-end h-52 pt-6 px-2 border-b border-slate-800"></div>
+                    <div class="mt-4 flex justify-between text-xs text-slate-400">
+                        <span>💡 Filtra i mesi dal Registro Ore.</span>
+                        <span id="best-month-badge" class="font-mono text-blue-400">Mese top: --</span>
+                    </div>
                 </div>
 
                 <div class="glass-card rounded-2xl p-5 flex flex-col justify-between">
@@ -888,6 +315,7 @@ function openDeadlineModal() {
         <!-- TAB 2: REGISTRO ORE -->
         <section id="tab-lezioni" class="hidden space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
                 <div class="lg:col-span-4 glass-card rounded-2xl p-5 border border-blue-500/25 lg:sticky lg:top-28">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-base font-bold text-white flex items-center gap-2">
@@ -928,14 +356,19 @@ function openDeadlineModal() {
                                     <option value="15:00">15:00</option><option value="16:00">16:00</option>
                                 </select>
                                 <select id="lessonHours" onchange="onHoursOrStartChange()" class="bg-slate-900/90 border border-slate-700 rounded-xl px-2 py-2 text-white text-xs focus:outline-none shrink-0 w-20">
-                                    <option value="1">1h</option><option value="2" selected>2h</option><option value="3">3h</option><option value="4">4h</option><option value="5">5h</option><option value="6">6h</option>
+                                    <option value="1">1h</option>
+                                    <option value="2" selected>2h</option>
+                                    <option value="3">3h</option>
+                                    <option value="4">4h</option>
+                                    <option value="5">5h</option>
+                                    <option value="6">6h</option>
                                 </select>
-                                <div class="bg-slate-950/80 border border-slate-700/80 rounded-xl px-2.5 py-2 text-blue-400 font-mono text-xs flex items-center justify-center flex-1" id="calculatedSlotText">
+                                <div class="bg-slate-950/80 border border-slate-700/80 rounded-xl px-2.5 py-2 text-blue-400 font-mono text-xs flex items-center justify-center whitespace-nowrap overflow-hidden text-ellipsis flex-1 tracking-wide" id="calculatedSlotText">
                                     09:00 - 11:00
                                 </div>
                             </div>
                             <div id="slotContainerClub" class="hidden w-full">
-                                <select id="lessonClubSlot" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+                                <select id="lessonClubSlot" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none whitespace-nowrap">
                                     <option value="09:00 - 12:00">09:00 - 12:00 (Mattina)</option>
                                     <option value="14:00 - 17:00">14:00 - 17:00 (Pomeriggio)</option>
                                 </select>
@@ -953,23 +386,34 @@ function openDeadlineModal() {
                         <div id="lessonClientWrapper" class="relative">
                             <label class="block text-xs text-slate-400 mb-1">Cliente / Allievo</label>
                             <div class="relative">
-                                <input type="text" id="clientSearchInput" oninput="onClientSearchInput()" onclick="toggleClientDropdown(true)" placeholder="Cerca cliente..." autocomplete="off" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                </span>
+                                <input type="text" id="clientSearchInput" oninput="onClientSearchInput()" onclick="toggleClientDropdown(true)" placeholder="Cerca cliente..." autocomplete="off" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl pl-9 pr-8 py-2 text-white text-xs focus:outline-none focus:border-blue-400">
                                 <input type="hidden" id="lessonClient" value="">
+                                <span class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-slate-400">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </span>
                             </div>
                             <div id="clientDropdownList" class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto hidden"></div>
                         </div>
 
                         <div class="p-3 rounded-xl bg-slate-900/95 border border-slate-700/80 space-y-1.5">
-                            <span class="text-xs text-slate-300 font-medium">Compenso Netto (Calcolato):</span>
-                            <input type="number" id="lessonNetAmount" step="0.5" min="0" required class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-emerald-400 font-mono font-bold text-sm" readonly>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-slate-300 font-medium">Compenso Netto (Calcolato):</span>
+                            </div>
+                            <div>
+                                <input type="number" id="lessonNetAmount" step="0.5" min="0" required class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-1.5 text-emerald-400 font-mono font-bold text-sm focus:outline-none" readonly>
+                            </div>
+                            <p id="lessonRateHint" class="text-[11px] text-slate-400">Tariffa automatica applicata</p>
                         </div>
 
                         <div>
                             <label class="block text-xs text-slate-400 mb-1">Note / Focus</label>
-                            <input type="text" id="lessonNotes" placeholder="Es. Lavorato su FS 360..." class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs">
+                            <input type="text" id="lessonNotes" placeholder="Es. Lavorato su FS 360..." class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-white text-xs focus:outline-none">
                         </div>
 
-                        <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/20 transition">
+                        <button type="submit" class="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/20 transition">
                             Salva
                         </button>
                     </form>
@@ -979,26 +423,34 @@ function openDeadlineModal() {
                     <div class="glass-card rounded-2xl p-4 space-y-3">
                         <div class="flex flex-wrap items-center justify-between gap-2">
                             <h3 class="font-bold text-white text-base">Storico Ore & Compensi</h3>
-                            <button onclick="exportCSV()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium">Esporta CSV</button>
+                            <div class="flex items-center gap-2">
+                                <button onclick="exportCSV()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition">
+                                    Esporta CSV
+                                </button>
+                            </div>
                         </div>
+
                         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
                             <select id="filterEntity" onchange="renderLessons()" class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
                                 <option value="all">Tutti (Scuola + Club)</option>
-                                <option value="scuola">Solo Scuola</option>
-                                <option value="club">Solo Club</option>
+                                <option value="scuola">&#128308; Solo Scuola</option>
+                                <option value="club">&#128994; Solo Club</option>
                             </select>
                             <select id="filterMonth" onchange="renderLessons()" class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
                                 <option value="all">Tutti i Mesi</option>
-                                <option value="12">Dicembre</option><option value="01">Gennaio</option><option value="02">Febbraio</option><option value="03">Marzo</option><option value="04">Aprile</option>
+                                <option value="12">Dicembre</option>
+                                <option value="01">Gennaio</option><option value="02">Febbraio</option>
+                                <option value="03">Marzo</option><option value="04">Aprile</option>
                             </select>
                             <select id="filterType" onchange="renderLessons()" class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
                                 <option value="all">Tutte le Tipologie</option>
-                                <option value="individuale">Individuale</option>
-                                <option value="collettiva">Collettiva</option>
-                                <option value="club_gruppo">Gruppo Club</option>
+                                <option value="individuale">Individuale (Scuola)</option>
+                                <option value="collettiva">Collettiva (Scuola)</option>
+                                <option value="club_gruppo">Gruppo (Club)</option>
                             </select>
                         </div>
                     </div>
+
                     <div id="lessons-list-container" class="space-y-2.5"></div>
                 </div>
             </div>
@@ -1009,10 +461,13 @@ function openDeadlineModal() {
             <div class="glass-card rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-lg font-bold text-white">Rubrica Clienti (Rider Tracker)</h2>
-                    <p class="text-xs text-slate-400">Clicca su un cliente per aprire la scheda dettagliata e le abilità.</p>
+                    <p class="text-xs text-slate-400">Clicca su un cliente per aprire la scheda dettagliata, le abilità e le lezioni passate.</p>
                 </div>
-                <button onclick="openClientModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs shadow-lg">+ Nuovo Cliente</button>
+                <button onclick="openClientModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-500/20 transition flex items-center gap-2 shrink-0">
+                    + Nuovo Cliente
+                </button>
             </div>
+
             <div id="clients-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </section>
 
@@ -1022,15 +477,23 @@ function openDeadlineModal() {
                 <div class="lg:col-span-2 space-y-4">
                     <div class="glass-card rounded-2xl p-5 space-y-4">
                         <div class="flex flex-wrap items-center justify-between gap-2">
-                            <h3 class="font-bold text-white text-base">Agenda Scadenze Fiscali & Formative</h3>
+                            <div>
+                                <h3 class="font-bold text-white text-base">Agenda Scadenze Fiscali & Formative</h3>
+                                <p class="text-xs text-slate-400">Gestisci adempimenti, corsi e fatture</p>
+                            </div>
                             <div class="flex items-center gap-2">
-                                <button onclick="toggleCompletedDeadlines()" id="btn-toggle-completed" class="px-3 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Mostra Completate</button>
-                                <button onclick="openDeadlineModal()" class="px-3.5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs">+ Nuova Scadenza</button>
+                                <button onclick="toggleCompletedDeadlines()" id="btn-toggle-completed" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700">
+                                    Mostra Completate
+                                </button>
+                                <button onclick="openDeadlineModal()" class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md">
+                                    + Nuova Scadenza
+                                </button>
                             </div>
                         </div>
                         <div id="deadlines-list" class="space-y-2.5 pt-2"></div>
                     </div>
                 </div>
+
                 <div class="space-y-4">
                     <div class="glass-card rounded-2xl p-5">
                         <h3 class="font-bold text-white text-base mb-3">Manutenzione Tavola (Sciolina & Lamine)</h3>
@@ -1041,11 +504,14 @@ function openDeadlineModal() {
                                 <div id="wax-progress-bar" class="bg-emerald-500 h-full w-0"></div>
                             </div>
                         </div>
-                        <button onclick="resetWaxCounter()" class="w-full mt-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-blue-300 border border-slate-700">🔄 Ho fatto fare Sciolina & Lamine oggi</button>
+                        <button onclick="resetWaxCounter()" class="w-full mt-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-blue-300 border border-slate-700">
+                            🔄 Ho fatto fare Sciolina & Lamine oggi
+                        </button>
                     </div>
                 </div>
             </div>
         </section>
+
     </main>
 
     <!-- MODAL DETTAGLIO CLIENTE -->
@@ -1056,18 +522,29 @@ function openDeadlineModal() {
                     <h3 class="text-lg font-extrabold text-white" id="modal-detail-name">Nome Cliente</h3>
                     <p class="text-xs text-slate-400 mt-0.5">Stance: <strong class="text-slate-200" id="modal-detail-stance">Regular</strong> &bull; Livello: <strong class="text-blue-400" id="modal-detail-level">Base</strong></p>
                 </div>
-                <button onclick="closeClientDetailModal()" class="text-slate-400 hover:text-white p-1 text-lg font-bold">✕</button>
+                <div class="flex items-center gap-2">
+                    <button onclick="openClientModal(currentDetailClientId); closeClientDetailModal();" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700">Modifica</button>
+                    <button onclick="closeClientDetailModal()" class="text-slate-400 hover:text-white p-1 text-lg font-bold">✕</button>
+                </div>
             </div>
-            <div id="modal-detail-goal-box" class="hidden p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300">🎯 Obiettivo: <strong id="modal-detail-goal">--</strong></div>
+
+            <div id="modal-detail-goal-box" class="hidden p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300">
+                🎯 Obiettivo: <strong id="modal-detail-goal">--</strong>
+            </div>
+
             <div class="space-y-2">
-                <span class="text-xs font-semibold text-slate-400 uppercase">Progressione Tecnica:</span>
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Progressione Tecnica (Clicca per aggiornare):</span>
                 <div class="flex flex-wrap gap-1.5" id="modal-detail-skills"></div>
             </div>
+
             <div class="space-y-2.5 pt-2 border-t border-slate-800">
-                <span class="text-xs font-semibold text-slate-400 uppercase">Storico Lezioni:</span>
-                <div id="modal-detail-lessons" class="space-y-2 max-h-48 overflow-y-auto"></div>
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Storico Lezioni Passate:</span>
+                <div id="modal-detail-lessons" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
             </div>
-            <div class="flex justify-end pt-2 border-t border-slate-800"><button onclick="closeClientDetailModal()" class="px-4 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs">Chiudi</button></div>
+
+            <div class="flex justify-end pt-2 border-t border-slate-800">
+                <button onclick="closeClientDetailModal()" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs">Chiudi</button>
+            </div>
         </div>
     </div>
 
@@ -1076,33 +553,74 @@ function openDeadlineModal() {
         <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-700">
             <h3 class="text-base font-bold text-white">Configurazione Tariffe & Fisco</h3>
             <div class="space-y-3 text-xs">
-                <div><label class="block text-slate-400 mb-1">Target Economico Stagione (€)</label><input type="number" id="setSeasonGoal" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono"></div>
-                <div><label class="block text-slate-400 mb-1">Tariffa Scuola Individuale (€/h)</label><input type="number" id="setRateScuolaInd" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
-                <div><label class="block text-slate-400 mb-1">Tariffa Scuola Collettiva (€/h)</label><input type="number" id="setRateScuolaCol" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
-                <div><label class="block text-slate-400 mb-1">Tariffa Club (€/h)</label><input type="number" id="setRateClubHourly" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
-                <div><label class="block text-slate-400 mb-1">% Accantonamento Tasse</label><input type="number" id="setTaxReserve" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Target Economico Stagione (€)</label>
+                    <input type="number" id="setSeasonGoal" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-mono">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Tariffa Scuola Individuale (€/h)</label>
+                    <input type="number" id="setRateScuolaInd" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Tariffa Scuola Collettiva (€/h)</label>
+                    <input type="number" id="setRateScuolaCol" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Tariffa Club (€/h)</label>
+                    <input type="number" id="setRateClubHourly" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">% Accantonamento Tasse/Contributi</label>
+                    <input type="number" id="setTaxReserve" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                </div>
             </div>
             <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
                 <button onclick="closeSettingsModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs">Annulla</button>
-                <button onclick="saveSettings()" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs">Salva</button>
+                <button onclick="saveSettings()" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs">Salva</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL CLIENTE -->
+    <!-- MODAL CLIENTE (INSERIMENTO/MODIFICA) -->
     <div id="client-modal" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="glass-card rounded-2xl max-w-lg w-full p-6 space-y-4 border border-slate-700">
             <h3 class="text-base font-bold text-white" id="client-modal-title">Nuovo Cliente</h3>
             <form id="client-form" onsubmit="saveClient(event)" class="space-y-3 text-xs">
                 <input type="hidden" id="clientId" value="">
-                <div><label class="block text-slate-400 mb-1">Nome e Cognome *</label><input type="text" id="clientName" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
-                <div class="grid grid-cols-2 gap-2.5">
-                    <div><label class="block text-slate-400 mb-1">Stance</label><select id="clientStance" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"><option value="Regular">Regular</option><option value="Goofy">Goofy</option></select></div>
-                    <div><label class="block text-slate-400 mb-1">Livello</label><select id="clientLevel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"><option value="Base">Base</option><option value="Intermedio">Intermedio</option><option value="Avanzato">Avanzato</option><option value="Freestyle">Freestyle</option></select></div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Nome e Cognome *</label>
+                    <input type="text" id="clientName" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
                 </div>
-                <div><label class="block text-slate-400 mb-1">Obiettivo Principale</label><input type="text" id="clientGoal" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
-                <div><label class="block text-slate-400 mb-1">Note</label><textarea id="clientNotes" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></textarea></div>
-                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800"><button type="button" onclick="closeClientModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300">Annulla</button><button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold">Salva</button></div>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-slate-400 mb-1">Stance</label>
+                        <select id="clientStance" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none">
+                            <option value="Regular">Regular</option>
+                            <option value="Goofy">Goofy</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">Livello</label>
+                        <select id="clientLevel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none">
+                            <option value="Base">Base</option>
+                            <option value="Intermedio">Intermedio</option>
+                            <option value="Avanzato">Avanzato</option>
+                            <option value="Freestyle">Freestyle</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Obiettivo Principale</label>
+                    <input type="text" id="clientGoal" placeholder="Es. Chiusura FS 360" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Note</label>
+                    <textarea id="clientNotes" rows="2" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></textarea>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeClientModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300">Annulla</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold">Salva</button>
+                </div>
             </form>
         </div>
     </div>
@@ -1112,15 +630,810 @@ function openDeadlineModal() {
         <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-700">
             <h3 class="text-base font-bold text-white">Nuova Scadenza</h3>
             <form onsubmit="saveDeadline(event)" class="space-y-3 text-xs">
-                <div><label class="block text-slate-400 mb-1">Titolo / Attività *</label><input type="text" id="dlTitle" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
-                <div><label class="block text-slate-400 mb-1">Data Scadenza *</label><input type="date" id="dlDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"></div>
-                <div><label class="block text-slate-400 mb-1">Categoria</label><select id="dlCategory" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white"><option value="fiscale">Fiscale</option><option value="formativa">Formativa</option><option value="altro">Altro</option></select></div>
-                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800"><button type="button" onclick="closeDeadlineModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300">Annulla</button><button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold">Salva</button></div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Titolo / Attività *</label>
+                    <input type="text" id="dlTitle" required placeholder="Es. Corso aggiornamento maestri, F24..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Data Scadenza *</label>
+                    <input type="date" id="dlDate" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Categoria</label>
+                    <select id="dlCategory" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
+                        <option value="fiscale">Fiscale / Commercialista</option>
+                        <option value="formativa">Formazione / Aggiornamento</option>
+                        <option value="altro">Altro</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeDeadlineModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300">Annulla</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold">Salva</button>
+                </div>
             </form>
         </div>
     </div>
 
     <!-- TOAST -->
-    <div id="toast" class="fixed bottom-16 right-6 z-50 hidden bg-slate-900 border border-blue-500/40 text-white px-4 py-3 rounded-xl shadow-2xl text-xs"><span id="toast-msg">OK</span></div>
+    <div id="toast" class="fixed bottom-16 right-6 z-50 hidden bg-slate-900 border border-blue-500/40 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs">
+        <span class="w-2 h-2 rounded-full bg-blue-400 animate-ping"></span>
+        <span id="toast-msg">OK</span>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'pila_snowboard_pro_v5';
+
+        function getDefaultState() {
+            return {
+                settings: {
+                    rateScuolaInd: 40,
+                    rateScuolaCol: 42,
+                    rateClubHourly: 35,
+                    seasonGoal: 12000,
+                    taxReservePct: 15,
+                    lastWaxDate: '2026-12-01'
+                },
+                clients: [
+                    { id: 'c1', name: 'Lorenzo V.', stance: 'Regular', level: 'Avanzato', goal: 'FS 360', notes: '', skills: { 'Conduzione Base': 2, 'Carving': 1, 'Switch': 1, 'Box/Rail': 0, '180': 1, '360': 1, 'Grab': 2 } },
+                    { id: 'c2', name: 'Chiara B.', stance: 'Goofy', level: 'Intermedio', goal: 'Conduzione', notes: '', skills: { 'Conduzione Base': 2, 'Carving': 2, 'Switch': 0, 'Box/Rail': 0, '180': 0, '360': 0, 'Grab': 1 } }
+                ],
+                lessons: [],
+                deadlines: [
+                    { id: 'd1', title: 'Fattura Mensile Scuola', category: 'fiscale', date: '2027-01-31', done: false },
+                    { id: 'd2', title: 'Aggiornamento Tecnico Maestro Pila', category: 'formativa', date: '2027-02-15', done: false }
+                ]
+            };
+        }
+
+        let appState = loadState();
+        let showCompletedDeadlinesState = false;
+        let currentDetailClientId = null;
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                return raw ? JSON.parse(raw) : getDefaultState();
+            } catch (e) {
+                return getDefaultState();
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+            refreshAllViews();
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 2500);
+        }
+
+        function formatEuro(n) {
+            return Number(n || 0).toLocaleString('it-IT') + ' €';
+        }
+
+        function formatDateIt(isoStr) {
+            if (!isoStr) return '--';
+            const parts = isoStr.split('-');
+            if (parts.length !== 3) return isoStr;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        function switchTab(tab) {
+            ['dashboard', 'lezioni', 'clienti', 'scadenze'].forEach(t => {
+                const sec = document.getElementById(`tab-${t}`);
+                if (sec) sec.classList.toggle('hidden', t !== tab);
+                
+                const deskNav = document.getElementById(`nav-${t}`);
+                if (deskNav) {
+                    if (t === tab) {
+                        deskNav.className = "nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-sm shadow-blue-500/10";
+                    } else {
+                        deskNav.className = "nav-btn flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition text-slate-400 hover:text-white hover:bg-slate-800/60";
+                    }
+                }
+
+                const mobNav = document.getElementById(`mob-nav-${t}`);
+                if (mobNav) {
+                    if (t === tab) {
+                        mobNav.className = "flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-bold transition text-blue-400 bg-blue-500/15";
+                    } else {
+                        mobNav.className = "flex flex-col items-center py-1.5 px-3 rounded-xl text-xs font-medium transition text-slate-400 hover:text-slate-200";
+                    }
+                }
+            });
+            refreshAllViews();
+        }
+
+        // --- GESTIONE RICERCA CLIENTE CON MENU A TENDINA DINAMICO ---
+        function renderClientDropdownOptions(filterText = '') {
+            const listEl = document.getElementById('clientDropdownList');
+            if (!listEl) return;
+            const query = (filterText || '').toLowerCase().trim();
+            const filtered = appState.clients.filter(c => c.name.toLowerCase().includes(query));
+
+            let html = `<div onclick="selectClient('', '-- Nessun cliente specifico --')" class="px-3 py-2 hover:bg-slate-800 cursor-pointer text-slate-400 text-xs">-- Nessun cliente specifico --</div>`;
+            
+            if (filtered.length > 0) {
+                html += filtered.map(c => `
+                    <div onclick="selectClient('${c.id}', '${c.name.replace(/'/g, "\\'")}')" class="px-3 py-2 hover:bg-blue-600/20 hover:text-blue-300 cursor-pointer text-slate-200 text-xs flex items-center justify-between">
+                        <span>${c.name}</span>
+                        <span class="text-[10px] text-slate-400 font-mono">${c.level || 'Base'}</span>
+                    </div>
+                `).join('');
+            } else {
+                html += `<div class="px-3 py-2 text-slate-500 text-xs">Nessun cliente trovato</div>`;
+            }
+
+            listEl.innerHTML = html;
+        }
+
+        function toggleClientDropdown(show) {
+            const listEl = document.getElementById('clientDropdownList');
+            if (!listEl) return;
+            if (show) {
+                renderClientDropdownOptions(document.getElementById('clientSearchInput').value);
+                listEl.classList.remove('hidden');
+            } else {
+                setTimeout(() => listEl.classList.add('hidden'), 200);
+            }
+        }
+
+        function onClientSearchInput() {
+            const query = document.getElementById('clientSearchInput').value;
+            renderClientDropdownOptions(query);
+            document.getElementById('clientDropdownList').classList.remove('hidden');
+            if (!query.trim()) {
+                document.getElementById('lessonClient').value = '';
+            }
+        }
+
+        function selectClient(id, name) {
+            document.getElementById('lessonClient').value = id;
+            document.getElementById('clientSearchInput').value = id ? name : '';
+            document.getElementById('clientDropdownList').classList.add('hidden');
+        }
+
+        window.addEventListener('click', function(e) {
+            const wrap = document.getElementById('lessonClientWrapper');
+            if (wrap && !wrap.contains(e.target)) {
+                const listEl = document.getElementById('clientDropdownList');
+                if (listEl) listEl.classList.add('hidden');
+            }
+        });
+
+        function computeDefaultNet(entity, type, hours) {
+            const s = appState.settings;
+            const h = parseFloat(hours) || 1;
+            if (entity === 'scuola') {
+                return type === 'collettiva' ? h * s.rateScuolaCol : h * s.rateScuolaInd;
+            }
+            return 3 * s.rateClubHourly;
+        }
+
+        function recalculateFormNet() {
+            const entity = document.getElementById('lessonEntity').value;
+            const type = document.getElementById('lessonType').value;
+            const hours = entity === 'club' ? 3 : (parseFloat(document.getElementById('lessonHours').value) || 2);
+            const input = document.getElementById('lessonNetAmount');
+            input.value = computeDefaultNet(entity, type, hours);
+        }
+
+        function selectLessonEntity(entity) {
+            document.getElementById('lessonEntity').value = entity;
+            const typeWrap = document.getElementById('lessonTypeWrapper');
+            const typeSel = document.getElementById('lessonType');
+            const clientWrap = document.getElementById('lessonClientWrapper');
+            const slotScu = document.getElementById('slotContainerScuola');
+            const slotClu = document.getElementById('slotContainerClub');
+            const hInput = document.getElementById('lessonHours');
+            const btnScu = document.getElementById('btn-entity-scuola');
+            const btnClu = document.getElementById('btn-entity-club');
+
+            if (entity === 'scuola') {
+                btnScu.className = "py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-red-500/20 text-red-300 border-red-500/50 shadow-sm";
+                btnClu.className = "py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-slate-900 text-slate-400 border-slate-700 hover:bg-slate-800";
+                typeWrap.classList.remove('hidden');
+                typeSel.innerHTML = `<option value="individuale">Individuale</option><option value="collettiva">Collettiva</option>`;
+                clientWrap.classList.remove('hidden');
+                slotScu.classList.remove('hidden');
+                slotClu.classList.add('hidden');
+                hInput.style.display = 'block';
+                hInput.value = 2;
+            } else {
+                btnClu.className = "py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm";
+                btnScu.className = "py-2.5 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition bg-slate-900 text-slate-400 border-slate-700 hover:bg-slate-800";
+                typeWrap.classList.add('hidden');
+                typeSel.innerHTML = `<option value="club_gruppo">Gruppo Club</option>`;
+                typeSel.value = 'club_gruppo';
+                clientWrap.classList.add('hidden');
+                slotScu.classList.add('hidden');
+                slotClu.classList.remove('hidden');
+                hInput.style.display = 'none';
+                hInput.value = 3;
+            }
+            updateCalculatedSlot();
+            recalculateFormNet();
+        }
+
+        function updateCalculatedSlot() {
+            const start = document.getElementById('lessonStartTime').value;
+            const hours = parseFloat(document.getElementById('lessonHours').value) || 2;
+            const endHour = Math.min(17, parseInt(start) + hours);
+            document.getElementById('calculatedSlotText').textContent = `${start} - ${String(endHour).padStart(2,'0')}:00`;
+        }
+
+        function onHoursOrStartChange() {
+            updateCalculatedSlot();
+            recalculateFormNet();
+        }
+
+        function saveLesson(e) {
+            e.preventDefault();
+            const id = document.getElementById('lessonId').value;
+            const entity = document.getElementById('lessonEntity').value;
+            const hoursVal = entity === 'club' ? 3 : (parseFloat(document.getElementById('lessonHours').value) || 2);
+            const lesson = {
+                id: id || 'l_' + Date.now(),
+                date: document.getElementById('lessonDate').value,
+                slot: entity === 'scuola' ? document.getElementById('calculatedSlotText').textContent : document.getElementById('lessonClubSlot').value,
+                entity: entity,
+                type: entity === 'club' ? 'club_gruppo' : document.getElementById('lessonType').value,
+                hours: hoursVal,
+                netAmount: computeDefaultNet(entity, document.getElementById('lessonType').value, hoursVal),
+                clientId: entity === 'scuola' ? document.getElementById('lessonClient').value : '',
+                notes: document.getElementById('lessonNotes').value.trim()
+            };
+
+            if (id) {
+                const idx = appState.lessons.findIndex(x => x.id === id);
+                if (idx > -1) appState.lessons[idx] = lesson;
+            } else {
+                appState.lessons.unshift(lesson);
+            }
+
+            resetLessonForm();
+            saveState();
+            showToast('Lezione salvata!');
+        }
+
+        function resetLessonForm() {
+            document.getElementById('lessonId').value = '';
+            document.getElementById('lessonDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('lessonHours').value = 2;
+            document.getElementById('lessonNotes').value = '';
+            document.getElementById('clientSearchInput').value = '';
+            document.getElementById('lessonClient').value = '';
+            selectLessonEntity('scuola');
+        }
+
+        function deleteLesson(id) {
+            appState.lessons = appState.lessons.filter(x => x.id !== id);
+            saveState();
+            showToast('Eliminata.');
+        }
+
+        function renderLessons() {
+            const container = document.getElementById('lessons-list-container');
+            const badgeCount = document.getElementById('badge-lezioni-count');
+            if (badgeCount) badgeCount.textContent = appState.lessons.length;
+            if (!container) return;
+
+            const fEntity = document.getElementById('filterEntity').value;
+            const fMonth = document.getElementById('filterMonth').value;
+            const fType = document.getElementById('filterType').value;
+
+            const filtered = appState.lessons.filter(l => {
+                if (fEntity !== 'all' && l.entity !== fEntity) return false;
+                if (fMonth !== 'all') {
+                    const m = l.date.split('-')[1];
+                    if (m !== fMonth) return false;
+                }
+                if (fType !== 'all' && l.type !== fType) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="glass-card rounded-xl p-6 text-center text-slate-400 text-xs">Nessuna lezione trovata con i filtri selezionati.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(l => {
+                const client = appState.clients.find(c => c.id === l.clientId);
+                return `
+                    <div class="glass-card rounded-xl p-3.5 flex items-center justify-between text-xs gap-2">
+                        <div>
+                            <div class="flex items-center gap-2 font-bold text-white">
+                                <span>${formatDateIt(l.date)}</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] ${l.entity === 'scuola' ? 'bg-red-500/20 text-red-300' : 'bg-emerald-500/20 text-emerald-300'}">${l.entity}</span>
+                                <span class="text-emerald-400 font-mono">${formatEuro(l.netAmount)}</span>
+                            </div>
+                            <div class="text-slate-400 mt-0.5">${client ? client.name : 'Nessun cliente'} &bull; ${l.slot} (${l.hours}h) ${l.notes ? ' &bull; ' + l.notes : ''}</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="deleteLesson('${l.id}')" class="text-rose-400 hover:text-rose-300 p-1" title="Elimina">✕</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- GESTIONE SCHEDA DETTAGLIO CLIENTE ---
+        function openClientDetailModal(clientId) {
+            currentDetailClientId = clientId;
+            const c = appState.clients.find(x => x.id === clientId);
+            if (!c) return;
+
+            document.getElementById('modal-detail-name').textContent = c.name;
+            document.getElementById('modal-detail-stance').textContent = c.stance || 'Regular';
+            document.getElementById('modal-detail-level').textContent = c.level || 'Base';
+
+            const goalBox = document.getElementById('modal-detail-goal-box');
+            if (c.goal) {
+                goalBox.classList.remove('hidden');
+                document.getElementById('modal-detail-goal').textContent = c.goal;
+            } else {
+                goalBox.classList.add('hidden');
+            }
+
+            renderModalDetailSkills(c);
+            renderModalDetailLessons(c.id);
+
+            document.getElementById('client-detail-modal').classList.remove('hidden');
+        }
+
+        function closeClientDetailModal() {
+            document.getElementById('client-detail-modal').classList.add('hidden');
+            currentDetailClientId = null;
+        }
+
+        function renderModalDetailSkills(c) {
+            const container = document.getElementById('modal-detail-skills');
+            if (!container) return;
+            const skillList = ['Conduzione Base', 'Carving', 'Switch', 'Box/Rail', '180', '360', 'Grab'];
+            if (!c.skills) c.skills = {};
+
+            container.innerHTML = skillList.map(sk => {
+                const status = c.skills[sk] || 0;
+                let bgClass = 'bg-slate-800 text-slate-400 border-slate-700';
+                if (status === 1) bgClass = 'bg-blue-500/20 text-blue-300 border-blue-500/40 font-semibold';
+                if (status === 2) bgClass = 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-bold';
+                return `<button type="button" onclick="cycleModalSkill('${c.id}', '${sk}')" class="skill-badge px-2.5 py-1 rounded-lg border text-[11px] ${bgClass}">${sk}</button>`;
+            }).join('');
+        }
+
+        function cycleModalSkill(clientId, skillName) {
+            const c = appState.clients.find(x => x.id === clientId);
+            if (!c) return;
+            if (!c.skills) c.skills = {};
+            const current = c.skills[skillName] || 0;
+            c.skills[skillName] = (current + 1) % 3;
+            saveState();
+            renderModalDetailSkills(c);
+        }
+
+        function renderModalDetailLessons(clientId) {
+            const container = document.getElementById('modal-detail-lessons');
+            if (!container) return;
+            const cLessons = appState.lessons.filter(l => l.clientId === clientId);
+
+            if (cLessons.length === 0) {
+                container.innerHTML = `<div class="p-3 bg-slate-900/50 rounded-xl text-slate-400 text-xs text-center">Nessuna lezione registrata con questo cliente.</div>`;
+                return;
+            }
+
+            container.innerHTML = cLessons.map(l => `
+                <div class="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between text-xs">
+                    <div>
+                        <div class="flex items-center gap-2 font-bold text-white">
+                            <span>${formatDateIt(l.date)}</span>
+                            <span class="text-blue-400 font-mono">${l.slot} (${l.hours}h)</span>
+                        </div>
+                        <div class="text-slate-400 text-[11px] mt-0.5">${l.notes ? l.notes : 'Nessuna nota'}</div>
+                    </div>
+                    <span class="font-mono text-emerald-400">${formatEuro(l.netAmount)}</span>
+                </div>
+            `).join('');
+        }
+
+        function openClientModal(id = null) {
+            const modal = document.getElementById('client-modal');
+            if (modal) modal.classList.remove('hidden');
+            if (id) {
+                const c = appState.clients.find(x => x.id === id);
+                if (!c) return;
+                document.getElementById('client-modal-title').textContent = 'Modifica Cliente';
+                document.getElementById('clientId').value = c.id;
+                document.getElementById('clientName').value = c.name;
+                document.getElementById('clientStance').value = c.stance || 'Regular';
+                document.getElementById('clientLevel').value = c.level || 'Base';
+                document.getElementById('clientGoal').value = c.goal || '';
+                document.getElementById('clientNotes').value = c.notes || '';
+            } else {
+                document.getElementById('client-modal-title').textContent = 'Nuovo Cliente';
+                const form = document.getElementById('client-form');
+                if (form) form.reset();
+                document.getElementById('clientId').value = '';
+            }
+        }
+
+        function closeClientModal() {
+            const modal = document.getElementById('client-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function saveClient(e) {
+            e.preventDefault();
+            const id = document.getElementById('clientId').value;
+            const client = {
+                id: id || 'c_' + Date.now(),
+                name: document.getElementById('clientName').value.trim(),
+                stance: document.getElementById('clientStance').value,
+                level: document.getElementById('clientLevel').value,
+                goal: document.getElementById('clientGoal').value.trim(),
+                notes: document.getElementById('clientNotes').value.trim(),
+                skills: {}
+            };
+
+            const existing = appState.clients.find(x => x.id === client.id);
+            if (existing && existing.skills) {
+                client.skills = existing.skills;
+            } else {
+                client.skills = { 'Conduzione Base': 0, 'Carving': 0, 'Switch': 0, 'Box/Rail': 0, '180': 0, '360': 0, 'Grab': 0 };
+            }
+
+            if (id) {
+                const idx = appState.clients.findIndex(x => x.id === id);
+                if (idx > -1) appState.clients[idx] = client;
+            } else {
+                appState.clients.push(client);
+            }
+
+            closeClientModal();
+            saveState();
+            showToast('Cliente salvato!');
+        }
+
+        function deleteClient(id) {
+            appState.clients = appState.clients.filter(x => x.id !== id);
+            saveState();
+            showToast('Cliente eliminato.');
+        }
+
+        function renderClients() {
+            const grid = document.getElementById('clients-grid');
+            const badgeCount = document.getElementById('badge-clienti-count');
+            if (badgeCount) badgeCount.textContent = appState.clients.length;
+            if (!grid) return;
+
+            if (appState.clients.length === 0) {
+                grid.innerHTML = `<div class="glass-card rounded-2xl p-6 text-center text-slate-400 text-xs col-span-3">Nessun cliente in rubrica. Clicca su "+ Nuovo Cliente".</div>`;
+                return;
+            }
+
+            grid.innerHTML = appState.clients.map(c => {
+                return `
+                    <div onclick="openClientDetailModal('${c.id}')" class="glass-card rounded-2xl p-4 space-y-2.5 cursor-pointer hover:border-blue-500/40 transition group">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h3 class="font-bold text-white text-base group-hover:text-blue-400 transition">${c.name}</h3>
+                                <p class="text-xs text-slate-400 mt-0.5">Stance: <strong class="text-slate-200">${c.stance || 'Regular'}</strong> &bull; Livello: <strong class="text-blue-400">${c.level || 'Base'}</strong></p>
+                            </div>
+                            <div class="flex items-center gap-1" onclick="event.stopPropagation()">
+                                <button onclick="openClientModal('${c.id}')" class="p-1 text-slate-400 hover:text-white" title="Modifica">✏️</button>
+                                <button onclick="deleteClient('${c.id}')" class="p-1 text-rose-400 hover:text-rose-300" title="Elimina">✕</button>
+                            </div>
+                        </div>
+                        ${c.goal ? `<p class="text-[11px] text-blue-300 bg-blue-500/10 border border-blue-500/20 px-2 py-1 rounded-lg truncate">🎯 <strong>${c.goal}</strong></p>` : ''}
+                        <div class="text-[10px] text-slate-500 pt-1 flex items-center justify-between">
+                            <span>Clicca per dettagli & lezioni</span>
+                            <span class="text-blue-400 font-bold">&rarr;</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openDeadlineModal() {
+            const modal = document.getElementById('deadline-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeDeadlineModal() {
+            const modal = document.getElementById('deadline-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function saveDeadline(e) {
+            e.preventDefault();
+            const dl = {
+                id: 'dl_' + Date.now(),
+                title: document.getElementById('dlTitle').value.trim(),
+                date: document.getElementById('dlDate').value,
+                category: document.getElementById('dlCategory').value,
+                done: false
+            };
+            appState.deadlines.push(dl);
+            closeDeadlineModal();
+            saveState();
+            showToast('Scadenza aggiunta!');
+        }
+
+        function toggleDeadlineDone(id) {
+            const d = appState.deadlines.find(x => x.id === id);
+            if (d) {
+                d.done = !d.done;
+                saveState();
+            }
+        }
+
+        function deleteDeadline(id) {
+            appState.deadlines = appState.deadlines.filter(x => x.id !== id);
+            saveState();
+        }
+
+        function toggleCompletedDeadlines() {
+            showCompletedDeadlinesState = !showCompletedDeadlinesState;
+            const btn = document.getElementById('btn-toggle-completed');
+            if (btn) {
+                btn.textContent = showCompletedDeadlinesState ? 'Nascondi Completate' : 'Mostra Completate';
+                btn.className = showCompletedDeadlinesState 
+                    ? 'px-3 py-2 rounded-xl bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-500/40' 
+                    : 'px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700';
+            }
+            renderDeadlines();
+        }
+
+        function renderDeadlines() {
+            const container = document.getElementById('deadlines-list');
+            const alertDot = document.getElementById('badge-scadenze-alert');
+            if (!container) return;
+
+            const pending = appState.deadlines.filter(d => !d.done);
+            if (alertDot) alertDot.classList.toggle('hidden', pending.length === 0);
+
+            const displayList = appState.deadlines.filter(d => showCompletedDeadlinesState || !d.done);
+
+            if (displayList.length === 0) {
+                container.innerHTML = `<div class="p-4 rounded-xl bg-slate-900/50 text-slate-400 text-xs text-center">Nessuna scadenza in programma.</div>`;
+                return;
+            }
+
+            container.innerHTML = displayList.map(d => `
+                <div class="p-3.5 rounded-xl border flex items-center justify-between text-xs gap-3 ${d.done ? 'bg-slate-900/40 border-slate-800 opacity-60' : 'glass-card border-slate-700/80'}">
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleDeadlineDone('${d.id}')" class="w-6 h-6 rounded-lg border flex items-center justify-center transition ${d.done ? 'bg-emerald-500 border-emerald-400 text-slate-950 font-bold' : 'border-slate-600 hover:border-blue-400 text-transparent'}">✓</button>
+                        <div>
+                            <h4 class="font-bold ${d.done ? 'line-through text-slate-400' : 'text-white'}">${d.title}</h4>
+                            <p class="text-[11px] text-slate-400">${d.category} &bull; Scadenza: <strong class="text-blue-300">${formatDateIt(d.date)}</strong></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="deleteDeadline('${d.id}')" class="p-1.5 text-rose-400 hover:text-rose-300 transition" title="Elimina">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openSettingsModal() {
+            const m = document.getElementById('settings-modal');
+            if (m) m.classList.remove('hidden');
+            document.getElementById('setSeasonGoal').value = appState.settings.seasonGoal || 12000;
+            document.getElementById('setRateScuolaInd').value = appState.settings.rateScuolaInd;
+            document.getElementById('setRateScuolaCol').value = appState.settings.rateScuolaCol;
+            document.getElementById('setRateClubHourly').value = appState.settings.rateClubHourly;
+            document.getElementById('setTaxReserve').value = appState.settings.taxReservePct;
+        }
+
+        function closeSettingsModal() {
+            const m = document.getElementById('settings-modal');
+            if (m) m.classList.add('hidden');
+        }
+
+        function saveSettings() {
+            appState.settings.seasonGoal = parseFloat(document.getElementById('setSeasonGoal').value) || 12000;
+            appState.settings.rateScuolaInd = parseFloat(document.getElementById('setRateScuolaInd').value) || 40;
+            appState.settings.rateScuolaCol = parseFloat(document.getElementById('setRateScuolaCol').value) || 42;
+            appState.settings.rateClubHourly = parseFloat(document.getElementById('setRateClubHourly').value) || 35;
+            appState.settings.taxReservePct = parseFloat(document.getElementById('setTaxReserve').value) || 15;
+
+            appState.lessons.forEach(l => {
+                l.netAmount = computeDefaultNet(l.entity, l.type, l.hours);
+            });
+
+            closeSettingsModal();
+            saveState();
+            showToast('Impostazioni aggiornate!');
+        }
+
+        function resetWaxCounter() {
+            appState.settings.lastWaxDate = new Date().toISOString().split('T')[0];
+            saveState();
+            showToast('Manutenzione tavola registrata oggi!');
+        }
+
+        function updateDashboardAndKPIs() {
+            const s = appState.settings;
+            let totalNet = 0;
+            let hoursScuola = 0;
+            let hoursClub = 0;
+            let euroScuola = 0;
+            let euroClub = 0;
+            let daysSet = new Set();
+
+            appState.lessons.forEach(l => {
+                totalNet += l.netAmount;
+                daysSet.add(l.date);
+                if (l.entity === 'scuola') {
+                    hoursScuola += l.hours;
+                    euroScuola += l.netAmount;
+                } else {
+                    hoursClub += l.hours;
+                    euroClub += l.netAmount;
+                }
+            });
+
+            const totalHours = hoursScuola + hoursClub;
+            const taxNet = totalNet * (s.taxReservePct / 100);
+            const avgHourly = totalHours > 0 ? totalNet / totalHours : 0;
+
+            document.getElementById('headerRateScuola').textContent = s.rateScuolaInd + '€/h';
+            document.getElementById('headerRateClub').textContent = s.rateClubHourly + '€/h';
+
+            document.getElementById('kpi-total-net').textContent = formatEuro(totalNet);
+            document.getElementById('kpi-paid-net').textContent = formatEuro(totalNet);
+            document.getElementById('kpi-tax-net').textContent = formatEuro(taxNet);
+
+            document.getElementById('kpi-total-hours').textContent = totalHours.toFixed(1) + 'h';
+            document.getElementById('kpi-days-count').textContent = `(${daysSet.size} giornate)`;
+            document.getElementById('kpi-hours-scuola').textContent = hoursScuola.toFixed(1) + 'h';
+            document.getElementById('kpi-hours-club').textContent = hoursClub.toFixed(1) + 'h';
+
+            const scuolaPct = totalHours > 0 ? (hoursScuola / totalHours) * 100 : 50;
+            document.getElementById('bar-hours-scuola').style.width = scuolaPct + '%';
+            document.getElementById('bar-hours-club').style.width = (100 - scuolaPct) + '%';
+
+            document.getElementById('kpi-euro-scuola').textContent = formatEuro(euroScuola);
+            document.getElementById('kpi-euro-club').textContent = formatEuro(euroClub);
+            document.getElementById('kpi-avg-hourly').textContent = avgHourly.toFixed(2).replace('.', ',') + ' €/h';
+
+            const goal = s.seasonGoal || 12000;
+            const goalPct = Math.min(100, (totalNet / goal) * 100);
+            document.getElementById('kpi-goal-current').textContent = formatEuro(totalNet);
+            document.getElementById('kpi-goal-target').textContent = formatEuro(goal);
+            document.getElementById('kpi-goal-pct').textContent = goalPct.toFixed(0) + '%';
+            document.getElementById('bar-season-goal').style.width = goalPct + '%';
+
+            let hoursSinceWax = 0;
+            const lastWaxTime = new Date(s.lastWaxDate || '2026-12-01').getTime();
+            appState.lessons.forEach(l => {
+                if (new Date(l.date).getTime() >= lastWaxTime) {
+                    hoursSinceWax += l.hours;
+                }
+            });
+            document.getElementById('wax-hours-since').textContent = hoursSinceWax.toFixed(1) + 'h';
+            document.getElementById('wax-last-date').textContent = formatDateIt(s.lastWaxDate || '2026-12-01');
+            const waxPct = Math.min(100, (hoursSinceWax / 25) * 100);
+            const waxBar = document.getElementById('wax-progress-bar');
+            if (waxBar) {
+                waxBar.style.width = waxPct + '%';
+                waxBar.className = hoursSinceWax >= 25 ? 'bg-rose-500 h-full' : 'bg-emerald-500 h-full';
+            }
+            const waxStatusBtn = document.getElementById('kpi-wax-status');
+            if (waxStatusBtn) {
+                waxStatusBtn.textContent = hoursSinceWax >= 25 ? 'MANUTENZIONE CONSIGLIATA' : 'OK';
+                waxStatusBtn.className = hoursSinceWax >= 25 ? 'font-mono font-semibold text-rose-400 hover:underline animate-pulse' : 'font-mono font-semibold text-emerald-400 hover:underline';
+            }
+
+            renderMonthlyChart();
+            renderTypeBreakdown(hoursScuola, hoursClub, euroScuola, euroClub);
+        }
+
+        function renderMonthlyChart() {
+            const chart = document.getElementById('monthly-chart');
+            if (!chart) return;
+
+            const months = [
+                { num: '12', name: 'Dic' },
+                { num: '01', name: 'Gen' },
+                { num: '02', name: 'Feb' },
+                { num: '03', name: 'Mar' },
+                { num: '04', name: 'Apr' }
+            ];
+
+            let totals = {};
+            months.forEach(m => totals[m.num] = 0);
+            appState.lessons.forEach(l => {
+                const m = l.date.split('-')[1];
+                if (totals[m] !== undefined) {
+                    totals[m] += l.netAmount;
+                }
+            });
+
+            const maxVal = Math.max(100, ...Object.values(totals));
+
+            chart.innerHTML = months.map(m => {
+                const val = totals[m.num];
+                const heightPct = Math.max(8, (val / maxVal) * 100);
+                return `
+                    <div class="flex flex-col items-center gap-1.5 h-full justify-end">
+                        <span class="text-[10px] font-mono text-slate-300">${val > 0 ? val + '€' : ''}</span>
+                        <div class="w-full bg-gradient-to-t from-blue-600 to-indigo-400 rounded-t-lg transition-all duration-500" style="height: ${heightPct}%"></div>
+                        <span class="text-xs font-semibold text-slate-400 mt-1">${m.name}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderTypeBreakdown(scuolaH, clubH, scuolaE, clubE) {
+            const container = document.getElementById('lesson-type-breakdown');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                        <div>
+                            <p class="font-bold text-white text-xs">Scuola</p>
+                            <p class="text-[11px] text-slate-400">${scuolaH.toFixed(1)} ore totali</p>
+                        </div>
+                    </div>
+                    <span class="font-mono font-bold text-red-400 text-sm">${formatEuro(scuolaE)}</span>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+                        <div>
+                            <p class="font-bold text-white text-xs">Club</p>
+                            <p class="text-[11px] text-slate-400">${clubH.toFixed(1)} ore totali</p>
+                        </div>
+                    </div>
+                    <span class="font-mono font-bold text-emerald-400 text-sm">${formatEuro(clubE)}</span>
+                </div>
+            `;
+        }
+
+        function refreshAllViews() {
+            renderClientDropdownOptions();
+            renderLessons();
+            renderClients();
+            renderDeadlines();
+            updateDashboardAndKPIs();
+            if (currentDetailClientId) {
+                const c = appState.clients.find(x => x.id === currentDetailClientId);
+                if (c) {
+                    renderModalDetailSkills(c);
+                    renderModalDetailLessons(c.id);
+                }
+            }
+        }
+
+        function exportCSV() {
+            let csv = "Data,Ente,Tipologia,Ore,CompensoNetto,Cliente,Note\n";
+            appState.lessons.forEach(l => {
+                const client = appState.clients.find(c => c.id === l.clientId);
+                const clientName = client ? client.name : '';
+                csv += `"${formatDateIt(l.date)}","${l.entity}","${l.type}",${l.hours},${l.netAmount},"${clientName}","${l.notes || ''}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'shredlog_stagione.csv');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast('CSV esportato!');
+        }
+
+        window.onload = function() {
+            const dateEl = document.getElementById('lessonDate');
+            if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+            selectLessonEntity('scuola');
+            refreshAllViews();
+        };
+    </script>
 </body>
 </html>
